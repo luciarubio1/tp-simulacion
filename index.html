@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Simulación del centro de evaluación de competidores - Trabajo Práctico 5, Grupo 18. UTN FRC 2026.">
+  <title>Simulación de Olimpiadas de Python - TP5 Grupo 18</title>
+  <!-- Google Fonts Outfit & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+  <!-- CSS Stylesheet -->
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="header-container">
+      <div class="header-title">
+        <h1>Simulación de Olimpiadas Python 🐍</h1>
+        <p>Trabajo Práctico 5 - Sistemas de Colas & Runge-Kutta 4to Orden</p>
+      </div>
+      <div class="group-badge">
+        UTN FRC - GRUPO 18 - 4K2
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Layout -->
+  <main class="main-layout">
+    
+    <!-- Sidebar: Parametrización -->
+    <aside class="sidebar">
+      <h2 class="section-title">
+        <svg style="width: 1.2rem; height: 1.2rem; fill: currentColor;" viewBox="0 0 24 24"><path d="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.47,5.34 14.86,5.08L14.47,2.42C14.43,2.18 14.22,2 13.97,2H9.97C9.72,2 9.51,2.18 9.47,2.42L9.08,5.08C8.47,5.34 7.9,5.66 7.38,6.05L4.89,5.05C4.67,4.96 4.4,5.05 4.28,5.27L2.28,8.73C2.16,8.95 2.22,9.22 2.41,9.37L4.53,11C4.49,11.34 4.46,11.67 4.46,12C4.46,12.33 4.49,12.65 4.53,13L2.41,14.63C2.22,14.78 2.16,15.05 2.28,15.27L4.28,18.73C4.4,18.95 4.67,19.04 4.89,18.95L7.38,17.95C7.9,18.34 8.47,18.66 9.08,18.92L9.47,21.58C9.51,21.82 9.72,22 9.97,22H13.97C14.22,22 14.43,21.82 14.47,21.58L14.86,18.92C15.47,18.66 16.04,18.34 16.56,17.95L19.05,18.95C19.27,19.04 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,13V12.97Z"/></svg>
+        Parámetros
+      </h2>
+      
+      <form id="config-form" onsubmit="event.preventDefault(); ejecutarSimulacion();">
+        <!-- Rango de Iteración para Vector Estado -->
+        <div class="form-group-row">
+          <div class="form-group">
+            <label for="iter_desde" title="Iteración inicial desde la cual se mostrará el vector de estado (j)">Mostrar desde (j)</label>
+            <input type="number" id="iter_desde" value="1" min="1" required>
+          </div>
+          <div class="form-group">
+            <label for="iter_cantidad" title="Cantidad de iteraciones a mostrar a partir de j (i)">Cantidad (i)</label>
+            <input type="number" id="iter_cantidad" value="50" min="1" max="1000" required>
+          </div>
+        </div>
+        
+        <div class="form-group-row">
+          <div class="form-group">
+            <label for="tiempo_maximo" title="Tiempo máximo simulado en minutos (X)">Tiempo Máx (X)</label>
+            <input type="number" id="tiempo_maximo" value="480" min="1" required>
+          </div>
+          <div class="form-group">
+            <label for="max_iteraciones" title="Límite máximo absoluto de filas a generar en el motor de simulación">Límite Iterac.</label>
+            <input type="number" id="max_iteraciones" value="100000" min="1" max="500000" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="media_llegadas">Llegada Competidores (media, exp. neg.)</label>
+          <input type="number" id="media_llegadas" value="5" step="0.1" min="0.1" required>
+        </div>
+
+        <div class="form-group-row">
+          <div class="form-group">
+            <label for="media_ini">Atenc. Inicial (media)</label>
+            <input type="number" id="media_ini" value="8" step="0.1" min="0.1" required>
+          </div>
+          <div class="form-group">
+            <label for="desvio_ini">Atenc. Inicial (desvío)</label>
+            <input type="number" id="desvio_ini" value="2" step="0.1" min="0.1" required>
+          </div>
+        </div>
+
+        <div class="form-group-row">
+          <div class="form-group">
+            <label for="media_avan">Atenc. Avanz. (media)</label>
+            <input type="number" id="media_avan" value="12" step="0.1" min="0.1" required>
+          </div>
+          <div class="form-group">
+            <label for="desvio_avan">Atenc. Avanz. (desvío)</label>
+            <input type="number" id="desvio_avan" value="3" step="0.1" min="0.1" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="media_corte">Cortes Eléctricos (media dur. exp.)</label>
+          <input type="number" id="media_corte" value="2" step="0.1" min="0.1" required>
+        </div>
+
+        <div class="form-group-row">
+          <div class="form-group">
+            <label for="h_rk">Paso Integración (h RK4)</label>
+            <input type="number" id="h_rk" value="0.1" step="0.001" min="0.001" max="1" required>
+          </div>
+          <div class="form-group">
+            <label for="umbral_refuerzo" title="Largo de la cola a partir de la cual se convoca al Juez de Refuerzo">Umbral Refuerzo</label>
+            <input type="number" id="umbral_refuerzo" value="5" min="1" required>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-primary" id="btn-run">
+          <svg style="width: 1.2rem; height: 1.2rem; fill: currentColor;" viewBox="0 0 24 24"><path d="M8,5.14V19.14L19,12.14L8,5.14Z"/></svg>
+          Ejecutar Simulación
+        </button>
+      </form>
+    </aside>
+
+    <!-- Main Content Area -->
+    <section class="content-area">
+      
+      <!-- Metrics Dashboard -->
+      <div class="metrics-grid" id="metrics-dashboard">
+        <div class="metric-card">
+          <div class="metric-label">Permanencia Inicial</div>
+          <div class="metric-value" id="val-prom-ini">-</div>
+          <div class="metric-desc">Media de permanencia en cola (min)</div>
+        </div>
+        <div class="metric-card color-purple">
+          <div class="metric-label">Permanencia Avanzado</div>
+          <div class="metric-value" id="val-prom-avan">-</div>
+          <div class="metric-desc">Media de permanencia en cola (min)</div>
+        </div>
+        <div class="metric-card color-emerald">
+          <div class="metric-label">Ocupación Enzo</div>
+          <div class="metric-value" id="val-oc-enzo">-</div>
+          <div class="metric-desc">Incluye tiempos de corte de luz</div>
+        </div>
+        <div class="metric-card color-amber">
+          <div class="metric-label">Atendidos Totales</div>
+          <div class="metric-value" id="val-total-atendidos">-</div>
+          <div class="metric-desc">Competidores evaluados con éxito</div>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="tabs-nav">
+        <button class="tab-btn active" onclick="switchTab('tab-vector-estado', this)">Vector de Estado</button>
+        <button class="tab-btn" onclick="switchTab('tab-runge-kutta', this)">Tablas Runge-Kutta 4</button>
+        <button class="tab-btn" onclick="switchTab('tab-metricas-detalles', this)">Estadísticas Adicionales</button>
+      </nav>
+
+      <!-- TAB 1: VECTOR DE ESTADO -->
+      <div id="tab-vector-estado" class="tab-pane active card-block">
+        <div class="legend-grid">
+          <div class="legend-item">
+            <div class="legend-color" style="background-color: var(--accent-cyan);"></div>
+            <span>Fila Seleccionada (Inspeccionar objetos)</span>
+          </div>
+          <div class="legend-item">
+            <span><strong>Click en cualquier fila</strong> para ver el detalle de los competidores en cola y evaluación en ese instante.</span>
+          </div>
+        </div>
+        
+        <div class="table-container">
+          <table id="table-vector-estado">
+            <thead>
+              <tr>
+                <th rowspan="2">Iter.</th>
+                <th rowspan="2">Evento</th>
+                <th rowspan="2">Reloj (min)</th>
+                <th colspan="3">Próximos Eventos</th>
+                <th colspan="3">Julián</th>
+                <th colspan="3">Enzo</th>
+                <th colspan="4">Refuerzo</th>
+                <th colspan="2">Cola</th>
+                <th rowspan="2">¿Corte?</th>
+              </tr>
+              <tr>
+                <th>Llegada</th>
+                <th>Corte</th>
+                <th>Fin Corte</th>
+                <th>Estado</th>
+                <th>Comp.</th>
+                <th>Fin At.</th>
+                <th>Estado</th>
+                <th>Comp.</th>
+                <th>Fin At.</th>
+                <th>Estado</th>
+                <th>Comp.</th>
+                <th>Fin At.</th>
+                <th>Fin Turno</th>
+                <th>Tam.</th>
+                <th>Detalle</th>
+              </tr>
+            </thead>
+            <tbody id="body-vector-estado">
+              <tr>
+                <td colspan="19" class="empty-state">
+                  <i>📊</i>
+                  <p>Presiona "Ejecutar Simulación" para calcular y desplegar el vector de estado.</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Detail Panel (Active Competitors in selected row) -->
+        <div class="detail-panel" id="competitors-detail-panel">
+          <h3>
+            <svg style="width: 1.3rem; height: 1.3rem; fill: currentColor;" viewBox="0 0 24 24"><path d="M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14Z"/></svg>
+            Competidores en el Sistema (Fila Seleccionada: Iteración <span id="selected-iter-label">-</span>)
+          </h3>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID Competidor</th>
+                  <th>Categoría</th>
+                  <th>Tiempo Llegada</th>
+                  <th>RND Llegada</th>
+                  <th>RND Categoría</th>
+                  <th>Estado Actual</th>
+                  <th>Juez Asignado</th>
+                  <th>Tiempo en Cola</th>
+                  <th>RND Atenc. 1</th>
+                  <th>RND Atenc. 2</th>
+                  <th>Tiempo Atenc.</th>
+                  <th>Fin Atención</th>
+                </tr>
+              </thead>
+              <tbody id="body-competidores-detalles">
+                <!-- Loaded dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: RUNGE-KUTTA -->
+      <div id="tab-runge-kutta" class="tab-pane card-block">
+        <div class="rk-header">
+          <div>
+            <h2>Cálculo de Inconvenientes Eléctricos</h2>
+            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 0.25rem;">
+              Ecuación diferencial: dE/dt = (t² - E) * h²
+            </p>
+          </div>
+          <select id="rk-table-selector" class="rk-select" onchange="mostrarTablaRKSeleccionada(this.value)">
+            <option value="">-- No hay simulaciones ejecutadas --</option>
+          </select>
+        </div>
+
+        <div class="table-container">
+          <table id="table-runge-kutta">
+            <thead>
+              <tr>
+                <th>Paso (n)</th>
+                <th>Tiempo (t)</th>
+                <th>E(t)</th>
+                <th>k1</th>
+                <th>k2</th>
+                <th>k3</th>
+                <th>k4</th>
+                <th>E(t + h)</th>
+                <th>Reloj Equiv. (min)</th>
+              </tr>
+            </thead>
+            <tbody id="body-runge-kutta">
+              <tr>
+                <td colspan="9" class="empty-state">
+                  <i>📈</i>
+                  <p>Selecciona una simulación ejecutada para ver las tablas RK4.</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB 3: ESTADÍSTICAS ADICIONALES Y METRICAS COMPLETA -->
+      <div id="tab-metricas-detalles" class="tab-pane card-block">
+        <h2 style="margin-bottom: 1rem;">Métricas Detalladas de la Simulación</h2>
+        
+        <div class="panel-grid">
+          <!-- 4 Estadísticas Adicionales Propuestas por el Equipo -->
+          <div style="background: var(--bg-card); border-radius: 12px; padding: 1.5rem; border: 1px solid var(--border-color);">
+            <h3 style="color: var(--accent-cyan); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+              ⭐ 4 Estadísticas Adicionales Propuestas
+            </h3>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
+              <!-- 1. Ocupacion Julian -->
+              <div style="background-color: var(--bg-primary); padding: 1rem; border-radius: 8px; border-left: 3px solid var(--accent-purple);">
+                <div style="font-size: 0.8rem; color: var(--text-secondary); font-weight:600; text-transform: uppercase;">Ocupación Julián</div>
+                <div style="font-size: 1.5rem; font-weight:700; margin-top:0.25rem;" id="stat-oc-julian">-</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top:0.25rem;">Porcentaje de ocupación total de Julián</div>
+              </div>
+
+              <!-- 2. Ocupacion Refuerzo -->
+              <div style="background-color: var(--bg-primary); padding: 1rem; border-radius: 8px; border-left: 3px solid var(--accent-emerald);">
+                <div style="font-size: 0.8rem; color: var(--text-secondary); font-weight:600; text-transform: uppercase;">Ocupación Refuerzo</div>
+                <div style="font-size: 1.5rem; font-weight:700; margin-top:0.25rem;" id="stat-oc-refuerzo">-</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top:0.25rem;">Porcentaje de ocupación total del Juez de Refuerzo</div>
+              </div>
+
+              <!-- 3. Proporción Categorias -->
+              <div style="background-color: var(--bg-primary); padding: 1rem; border-radius: 8px; border-left: 3px solid var(--accent-amber);">
+                <div style="font-size: 0.8rem; color: var(--text-secondary); font-weight:600; text-transform: uppercase;">Proporción Inicial vs Avanzado</div>
+                <div style="font-size: 1.1rem; font-weight:700; margin-top:0.5rem;" id="stat-proporcion-categorias">-</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top:0.25rem;">Competidores evaluados por categoría</div>
+              </div>
+
+              <!-- 4. Espera maxima -->
+              <div style="background-color: var(--bg-primary); padding: 1rem; border-radius: 8px; border-left: 3px solid var(--accent-rose);">
+                <div style="font-size: 0.8rem; color: var(--text-secondary); font-weight:600; text-transform: uppercase;">Tiempo Máximo de Espera</div>
+                <div style="font-size: 1.5rem; font-weight:700; margin-top:0.25rem;" id="stat-max-espera">-</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top:0.25rem;">Espera máxima registrada en cola (minutos)</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Métricas del Enunciado -->
+          <div style="background: var(--bg-card); border-radius: 12px; padding: 1.5rem; border: 1px solid var(--border-color); margin-top: 1rem;">
+            <h3 style="color: var(--accent-cyan); margin-bottom: 1rem;">📋 Métricas Generales Requeridas</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+              
+              <div>
+                <h4 style="color: var(--text-primary); margin-bottom: 0.5rem;">Tiempo de Permanencia Medio en Cola</h4>
+                <ul style="color: var(--text-secondary); list-style: none; padding-left: 0;">
+                  <li style="margin-bottom:0.4rem; display:flex; justify-content:space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.25rem;">
+                    <span>Categoría Inicial:</span> <strong id="val-media-ini-det" style="color: var(--text-primary);">-</strong>
+                  </li>
+                  <li style="margin-bottom:0.4rem; display:flex; justify-content:space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.25rem;">
+                    <span>Categoría Avanzado:</span> <strong id="val-media-avan-det" style="color: var(--text-primary);">-</strong>
+                  </li>
+                  <li style="margin-bottom:0.4rem; display:flex; justify-content:space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.25rem;">
+                    <span>Promedio Global:</span> <strong id="val-media-global-det" style="color: var(--accent-cyan);">-</strong>
+                  </li>
+                </ul>
+              </div>
+
+              <div>
+                <h4 style="color: var(--text-primary); margin-bottom: 0.5rem;">Competidores Atendidos por Juez</h4>
+                <ul style="color: var(--text-secondary); list-style: none; padding-left: 0;">
+                  <li style="margin-bottom:0.4rem; display:flex; justify-content:space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.25rem;">
+                    <span>Julián:</span> <strong id="val-atendidos-julian" style="color: var(--text-primary);">-</strong>
+                  </li>
+                  <li style="margin-bottom:0.4rem; display:flex; justify-content:space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.25rem;">
+                    <span>Enzo:</span> <strong id="val-atendidos-enzo" style="color: var(--text-primary);">-</strong>
+                  </li>
+                  <li style="margin-bottom:0.4rem; display:flex; justify-content:space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.25rem;">
+                    <span>Juez de Refuerzo:</span> <strong id="val-atendidos-refuerzo" style="color: var(--text-primary);">-</strong>
+                  </li>
+                </ul>
+              </div>
+
+              <div>
+                <h4 style="color: var(--text-primary); margin-bottom: 0.5rem;">Resumen de Simulación</h4>
+                <ul style="color: var(--text-secondary); list-style: none; padding-left: 0;">
+                  <li style="margin-bottom:0.4rem; display:flex; justify-content:space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.25rem;">
+                    <span>Tiempo total simulado:</span> <strong id="val-res-tiempo" style="color: var(--text-primary);">-</strong>
+                  </li>
+                  <li style="margin-bottom:0.4rem; display:flex; justify-content:space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.25rem;">
+                    <span>Iteraciones totales generadas:</span> <strong id="val-res-iteraciones" style="color: var(--text-primary);">-</strong>
+                  </li>
+                </ul>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <script src="main.js"></script>
+</body>
+</html>
