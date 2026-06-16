@@ -1,0 +1,131 @@
+=============================================================================
+GUIA DE ESTUDIO Y EXPLICACION DEL TRABAJO PRACTICO 5 - SIMULACION
+UTN FRC - Ingenieria en Sistemas de Informacion - Ciclo lectivo 2026
+TP5 - Grupo 18
+=============================================================================
+
+Esta guia contiene la explicacion teorica y practica del enunciado de nuestro trabajo
+practico de simulacion y del codigo desarrollado, para que todo el grupo este alineado
+al momento de defender el TP en el coloquio con los profesores.
+
+-----------------------------------------------------------------------------
+1. EXPLICACION DEL ENUNCIADO (EL MODELO DEL SISTEMA)
+-----------------------------------------------------------------------------
+
+El sistema modela un Centro de Evaluacion de Competidores en unas olimpiadas de
+programacion. Se describe a traves de 3 elementos fundamentales:
+
+A. LOS OBJETOS (COMPETIDORES)
+Llegan al centro siguiendo una distribucion Exponencial Negativa (media por defecto
+de 5 minutos, configurable en el frontend).
+Al llegar, se determina aleatoriamente su categoria con una probabilidad fija:
+- Categoria Inicial (60%): Requiere revision basica. Puede ser atendido por cualquier
+  juez (Julian, Enzo o el de Refuerzo). Su tiempo de atencion es una distribucion NORMAL.
+- Categoria Avanzado (40%): Requiere evaluacion avanzada. SOLO Julian puede atenderlos.
+  Su tiempo de atencion es una distribucion NORMAL.
+
+B. LOS SERVIDORES (JUECES)
+Disponemos de dos jueces fijos y uno temporal:
+- Julian (Fijo 1): Puede evaluar a competidores Iniciales y Avanzados.
+- Enzo (Fijo 2): Solo puede evaluar a competidores Iniciales.
+- Juez de Refuerzo (Temporal): Solo evalua Iniciales y funciona bajo reglas especiales:
+  * Convocatoria: Se lo convoca cuando la cola de espera alcanza 5 o mas competidores.
+  * Tiempo de arribo: Demora exactamente 10 minutos en llegar despues de ser convocado.
+  * Duracion del turno: Trabaja por un periodo Uniforme de entre 30 y 50 minutos.
+  * Fin de turno o Renovacion: Al finalizar su turno basico:
+    - Si la cola tiene 1 competidor o menos: Se retira (o espera a terminar el actual).
+    - Si la cola tiene 2 o mas competidores: Renueva su turno por un periodo adicional
+      Uniforme de entre 10 y 18 minutos.
+
+C. LA REGLA DE LA COLA (PRIORIDAD Y BLOQUEO DE COLA)
+Todos los competidores hacen una UNICA COLA comun por orden de llegada.
+- REGLA CRITICA: Si el competidor al frente de la cola (indice 0) es de categoria
+  Avanzado y Julian esta ocupado, NADIE MAS PUEDE PASAR. La cola queda bloqueada y
+  Enzo (aunque este libre) no puede atender a los Iniciales que estan mas atras en la
+  cola. Esto modela un bloqueo por compatibilidad de servicio.
+
+D. INCONVENIENTES ELECTRICOS (ECUACION DIFERENCIAL Y RUNGE-KUTTA 4)
+El centro sufre cortes de luz temporales.
+- Efecto del corte: Se suspenden todas las evaluaciones activas. Al terminar el corte,
+  las evaluaciones se reanudan exactamente desde el punto donde se interrumpieron.
+- Duracion del corte: Sigue una distribucion Exponencial con media de 2 minutos.
+- Programacion del proximo corte (RK4):
+  Se rige por la ecuacion diferencial: dE/dt = (t^2 - E) * h^2
+  * Para el primer corte: Se integra mediante RK4 partiendo de t=0, E(0)=20.
+  * Para los siguientes cortes: Al terminar el corte anterior, se reinicia la integracion
+    tomando como condicion inicial E(0) = Reloj actual de la simulacion.
+  * Condicion de parada de RK4: Se integra hasta que E(t) supere por primera vez a E(0).
+    El valor de t final multiplicado por 8 es el tiempo en minutos reales hasta el
+    proximo corte de luz.
+
+-----------------------------------------------------------------------------
+2. QUE HACE CADA PARTE DEL CODIGO (ARQUITECTURA MODULAR)
+-----------------------------------------------------------------------------
+
+Dividimos el codigo en 4 archivos independientes para mayor claridad y modularidad:
+
+A. runge_kutta.py (CALCULO MATHEMATICO)
+Resuelve la ecuacion diferencial usando el metodo Runge-Kutta de 4to Orden.
+- Implementa la funcion derivada dE/dt y calcula los cuatro coeficientes k1, k2, k3, k4
+  para cada paso.
+- Retorna el tiempo del proximo corte y una lista con todas las iteraciones de la tabla
+  RK4 para mostrar en el frontend.
+
+B. generadores.py (PROBABILIDAD Y ALEATORIEDAD)
+Contiene las formulas para generar variables aleatorias a partir de RND (Random.random()):
+- Exponencial: -media * ln(RND)
+- Normal (Metodo de Box-Muller): Toma dos RNDs (rnd1 y rnd2) y los transforma usando:
+  Z = sqrt(-2 * ln(rnd1)) * cos(2 * pi * rnd2)
+  Valor = media + desvio * Z
+- Uniforme: a + (b - a) * RND
+* Retorna el valor generado y los RNDs usados para poder mostrarlos en el vector de estado.
+
+C. simulador.py (MOTOR DE SIMULACION POR EVENTOS DISCRETOS)
+- Define las clases Competidor y Juez con todos sus atributos.
+- Contiene la funcion simular(params) que corre el loop de eventos. Avanza el reloj al
+  tiempo del evento mas proximo y actualiza el estado de las colas, servidores y
+  metricas acumuladas.
+- Inserta las filas solicitadas en el vector de estado, incluyendo en cada fila la lista
+  de todos los competidores activos en el sistema en ese instante de tiempo.
+
+D. simulacion.py (SERVIDOR WEB Y API HTTP)
+- Levanta un servidor HTTP nativo en el puerto 8000.
+- Sirve los archivos index.html, index.css y main.js al navegador.
+- Provee la ruta '/simular' que recibe parametros en formato JSON, ejecuta el motor del
+  simulador y retorna el vector de estado y metricas en formato JSON.
+
+E. index.html / index.css / main.js (INTERFAZ WEB INTERACTIVA)
+- index.html: Define los campos de parametros y las tablas.
+- index.css: Da una apariencia moderna en modo oscuro, evita desbordes y hace la barra
+  lateral scrollable si la pantalla es de baja resolucion.
+- main.js: Maneja el envio de parametros por fetch(), renderiza las tablas y permite que
+  al hacer clic en cualquier fila del vector de estado se muestre la lista detallada de
+  competidores activos.
+
+-----------------------------------------------------------------------------
+3. PREGUNTAS CLAVE DE COLOQUIO (PARA PREPARARSE)
+-----------------------------------------------------------------------------
+
+1. ¿Como se simula la reanudacion tras un corte de luz?
+R: Cuando empieza el corte, extendemos el tiempo de fin de atencion de los jueces
+ocupados sumandole la duracion del corte. El juez pasa a estado 'Interrumpido'. Al
+finalizar el corte, vuelven a estado 'Ocupado' y la simulacion sigue normalmente.
+
+2. ¿Como se calculo la ocupacion de Enzo (incluyendo los cortes)?
+R: El juez acumula ocupacion desde el momento en que toma un competidor hasta que este
+termina. Durante el corte, el juez sigue reteniendo al competidor (esta 'Interrumpido'),
+por lo que el tiempo transcurrido en el corte sigue sumando a su periodo ocupado. Al
+final de la simulacion, si sigue atendiendo, se le suma la fraccion de tiempo hasta
+el instante X. Al final se divide el acumulador sobre el tiempo total simulado.
+
+3. ¿Por que Runge-Kutta se calcula multiples veces?
+R: Porque el enunciado pide que para cada proxima llegada de corte se tome como E(0) el
+valor del reloj del vector de estado al momento de finalizar el inconveniente anterior.
+Como el reloj avanza, cada corte tiene un punto de partida E(0) diferente, requiriendo
+una nueva tabla de integracion RK4.
+
+4. ¿Que es el bloqueo por compatibilidad?
+R: Ocurre cuando el competidor que esta al frente de la cola es Avanzado y Julian esta
+ocupado. Aunque Enzo este libre, no puede atender a ningun Inicial que este detras de
+este competidor Avanzado porque se debe respetar estrictamente el orden de llegada.
+=============================================================================
