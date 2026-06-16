@@ -61,9 +61,15 @@
           </div>
         </div>
 
-        <div class="form-group">
-          <label for="media_llegadas">Llegada Competidores (media, exp. neg.)</label>
-          <input type="number" id="media_llegadas" value="5" step="0.1" min="0.1" required>
+        <div class="form-group-row">
+          <div class="form-group">
+            <label for="media_llegadas" title="Tiempo medio entre llegadas (distribución exponencial)">Llegadas (media)</label>
+            <input type="number" id="media_llegadas" value="5" step="0.1" min="0.1" required>
+          </div>
+          <div class="form-group">
+            <label for="umbral_refuerzo" title="Largo de la cola a partir de la cual se convoca al Juez de Refuerzo">Umbral Refuerzo</label>
+            <input type="number" id="umbral_refuerzo" value="5" min="1" required>
+          </div>
         </div>
 
         <div class="form-group-row">
@@ -88,19 +94,14 @@
           </div>
         </div>
 
-        <div class="form-group">
-          <label for="media_corte">Cortes Eléctricos (media dur. exp.)</label>
-          <input type="number" id="media_corte" value="2" step="0.1" min="0.1" required>
-        </div>
-
         <div class="form-group-row">
           <div class="form-group">
-            <label for="h_rk">Paso Integración (h RK4)</label>
-            <input type="number" id="h_rk" value="0.1" step="0.001" min="0.001" max="1" required>
+            <label for="media_corte" title="Media de duración del corte eléctrico (exponencial)">Cortes (media dur.)</label>
+            <input type="number" id="media_corte" value="2" step="0.1" min="0.1" required>
           </div>
           <div class="form-group">
-            <label for="umbral_refuerzo" title="Largo de la cola a partir de la cual se convoca al Juez de Refuerzo">Umbral Refuerzo</label>
-            <input type="number" id="umbral_refuerzo" value="5" min="1" required>
+            <label for="h_rk" title="Paso de integración para Runge-Kutta 4to orden">Paso Integrac. (h)</label>
+            <input type="number" id="h_rk" value="0.1" step="0.001" min="0.001" max="1" required>
           </div>
         </div>
 

@@ -126,8 +126,10 @@ header::before {
   background-color: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: 16px;
-  padding: 1.5rem;
+  padding: 1.25rem;
   height: fit-content;
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
   position: sticky;
   top: 1.5rem;
   box-shadow: var(--shadow-lg);
@@ -146,7 +148,7 @@ header::before {
 }
 
 .form-group {
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
 }
 
 .form-group-row {
@@ -215,13 +217,26 @@ header::before {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  min-width: 0;
 }
 
 /* Metrics Dashboard */
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 1rem;
+}
+
+@media (max-width: 1200px) {
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .metric-card {
