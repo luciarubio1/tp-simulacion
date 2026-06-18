@@ -10,10 +10,6 @@ import random
 from runge_kutta import runge_kutta_4
 from generadores import generar_exponencial, generar_normal, generar_uniforme
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  CLASES DEL SISTEMA
-# ─────────────────────────────────────────────────────────────────────────────
-
 class Competidor:
     _contador = 0
 
@@ -36,6 +32,9 @@ class Competidor:
         self.rnd_atencion_1 = None
         self.rnd_atencion_2 = None
         self.tiempo_atencion = None
+        
+        # Slot estático para el vector de estado
+        self.slot_idx = -1
 
 
 class Juez:
@@ -55,20 +54,11 @@ class Juez:
         self.rnd_duracion_turno = None
         self.duracion_turno = None
         self.debe_retirarse = False
-        
-        # Inicio de periodo de ocupación (para cálculo de % ocupación)
-        self._inicio_periodo_ocupado = None
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-#  MOTOR DE SIMULACIÓN PRINCIPAL
-# ─────────────────────────────────────────────────────────────────────────────
 
 def simular(params):
     """
     Simula el comportamiento del centro de evaluación por eventos discretos.
-    Recibe parámetros configurados desde el frontend y retorna las filas del
-    vector de estado, métricas y las tablas Runge-Kutta generadas.
     """
     T_MAX       = float(params.get('tiempo_maximo', 480))
     MAX_ITER    = int(params.get('max_iteraciones', 100000))
@@ -92,10 +82,28 @@ def simular(params):
 
     cola = []
     reloj = 0.0
+    reloj_anterior = 0.0
+    
+    # Slots de competidores activos (15 posiciones fijas)
+    competidores_slots = [None] * 15
+
+    def ocupar_slot(comp):
+        for idx in range(15):
+            if competidores_slots[idx] is None:
+                competidores_slots[idx] = comp
+                comp.slot_idx = idx
+                return idx
+        return -1
+
+    def liberar_slot(comp):
+        if comp and comp.slot_idx != -1:
+            competidores_slots[comp.slot_idx] = None
+            comp.slot_idx = -1
     
     # Calcular primer corte con RK4
     E0_inicial = 20.0
     tiempo_primer_corte, tabla_rk_inicial = runge_kutta_4(E0_inicial, H_RK)
+    t_final_rk_inicial = tabla_rk_inicial[-1]['t'] if tabla_rk_inicial else 0.0
     
     # Eventos iniciales
     t_llegada, rnd_llegada = generar_exponencial(MEDIA_LLEGADAS)
@@ -105,9 +113,19 @@ def simular(params):
     en_corte = False
     t_fin_corte = None
     
-    # Acumuladores
+    # Acumuladores y contadores
     lista_tiempos_cola_ini  = []
     lista_tiempos_cola_avan = []
+    
+    acum_espera_ini = 0.0
+    cont_espera_ini = 0
+    acum_espera_avan = 0.0
+    cont_espera_avan = 0
+    max_espera = 0.0
+    
+    acum_ocupacion_julian = 0.0
+    acum_ocupacion_enzo = 0.0
+    acum_ocupacion_refuerzo = 0.0
     
     vector_estado = []
     fila_final = None
@@ -119,9 +137,9 @@ def simular(params):
     iteracion = 0
 
     # ─────────────────────────────────────────────────────────────────────────
-    #  ASIGNACIÓN DESDE COLA (CORREGIDA)
+    #  ASIGNACIÓN DESDE COLA (CORREGIDA CON CAPTURA DE DETALLES)
     # ─────────────────────────────────────────────────────────────────────────
-    def asignar_desde_cola():
+    def asignar_desde_cola(detalles_dict=None):
         if en_corte or not cola:
             return
         
@@ -129,7 +147,7 @@ def simular(params):
             comp = cola[0]
             if comp.categoria == 'Avanzado':
                 if julian.estado == 'Libre':
-                    _iniciar_atencion(comp, julian)
+                    _iniciar_atencion(comp, julian, detalles_dict)
                     cola.pop(0)
                 else:
                     # Avanzado al frente y Julián ocupado -> Cola bloqueada
@@ -144,16 +162,29 @@ def simular(params):
                     juez_libre = refuerzo
                 
                 if juez_libre:
-                    _iniciar_atencion(comp, juez_libre)
+                    _iniciar_atencion(comp, juez_libre, detalles_dict)
                     cola.pop(0)
                 else:
                     # No hay jueces libres
                     break
 
-    def _iniciar_atencion(comp, juez):
+    def _iniciar_atencion(comp, juez, detalles_dict=None):
         comp.tiempo_inicio_atencion = reloj
         comp.tiempo_en_cola = reloj - comp.tiempo_llegada
         comp.juez_asignado = juez.nombre
+        
+        espera = comp.tiempo_en_cola
+        nonlocal acum_espera_ini, cont_espera_ini, acum_espera_avan, cont_espera_avan, max_espera
+        if comp.categoria == 'Inicial':
+            acum_espera_ini += espera
+            cont_espera_ini += 1
+            lista_tiempos_cola_ini.append(espera)
+        else:
+            acum_espera_avan += espera
+            cont_espera_avan += 1
+            lista_tiempos_cola_avan.append(espera)
+            
+        max_espera = max(max_espera, espera)
         
         if comp.categoria == 'Inicial':
             t_aten, r1, r2 = generar_normal(MEDIA_INI, DESVIO_INI)
@@ -168,7 +199,21 @@ def simular(params):
         juez.estado = 'Ocupado'
         juez.competidor_actual = comp
         juez.tiempo_fin_atencion = comp.tiempo_fin_atencion
-        juez._inicio_periodo_ocupado = reloj
+        
+        if detalles_dict is not None:
+            # Separar variables según el juez asignado
+            if juez.nombre == 'Julian':
+                detalles_dict['var_rnd_at1_julian'] = r1
+                detalles_dict['var_rnd_at2_julian'] = r2
+                detalles_dict['var_t_at_julian'] = t_aten
+            elif juez.nombre == 'Enzo':
+                detalles_dict['var_rnd_at1_enzo'] = r1
+                detalles_dict['var_rnd_at2_enzo'] = r2
+                detalles_dict['var_t_at_enzo'] = t_aten
+            elif juez.nombre == 'Refuerzo':
+                detalles_dict['var_rnd_at1_refuerzo'] = r1
+                detalles_dict['var_rnd_at2_refuerzo'] = r2
+                detalles_dict['var_t_at_refuerzo'] = t_aten
 
     # ─────────────────────────────────────────────────────────────────────────
     #  CONSTRUIR FILA DEL VECTOR DE ESTADO
@@ -201,81 +246,158 @@ def simular(params):
         prox_corte_str   = round(t_prox_corte, 4)   if not en_corte else '-'
         fin_corte_str    = round(t_fin_corte, 4)     if en_corte else '-'
         
-        # Serializar competidores activos
+        # Serializar competidores activos para el panel inferior
         competidores_activos = []
         for c in cola:
             competidores_activos.append({
                 "id": c.id,
                 "categoria": c.categoria,
                 "tiempo_llegada": round(c.tiempo_llegada, 4),
-                "estado": "En Cola",
+                "estado": f"EA({c.categoria[0]})",
                 "tiempo_inicio_atencion": "-",
                 "tiempo_fin_atencion": "-",
                 "juez_asignado": "-",
                 "tiempo_en_cola": round(reloj - c.tiempo_llegada, 4),
-                "rnd_categoria": round(c.rnd_categoria, 6),
+                "rnd_categoria": round(c.rnd_categoria, 2),
                 "rnd_atencion_1": "-",
                 "rnd_atencion_2": "-",
                 "tiempo_atencion": "-",
-                "rnd_llegada": round(c.rnd_llegada, 6)
+                "rnd_llegada": round(c.rnd_llegada, 2)
             })
-        if julian.competidor_actual:
-            c = julian.competidor_actual
-            competidores_activos.append({
-                "id": c.id,
-                "categoria": c.categoria,
-                "tiempo_llegada": round(c.tiempo_llegada, 4),
-                "estado": f"Evaluación ({julian_estado})",
-                "tiempo_inicio_atencion": round(c.tiempo_inicio_atencion, 4),
-                "tiempo_fin_atencion": round(c.tiempo_fin_atencion, 4),
-                "juez_asignado": "Julian",
-                "tiempo_en_cola": round(c.tiempo_en_cola, 4),
-                "rnd_categoria": round(c.rnd_categoria, 6),
-                "rnd_atencion_1": round(c.rnd_atencion_1, 6) if c.rnd_atencion_1 else "-",
-                "rnd_atencion_2": round(c.rnd_atencion_2, 6) if c.rnd_atencion_2 else "-",
-                "tiempo_atencion": round(c.tiempo_atencion, 4) if c.tiempo_atencion else "-",
-                "rnd_llegada": round(c.rnd_llegada, 6)
-            })
-        if enzo.competidor_actual:
-            c = enzo.competidor_actual
-            competidores_activos.append({
-                "id": c.id,
-                "categoria": c.categoria,
-                "tiempo_llegada": round(c.tiempo_llegada, 4),
-                "estado": f"Evaluación ({enzo_estado})",
-                "tiempo_inicio_atencion": round(c.tiempo_inicio_atencion, 4),
-                "tiempo_fin_atencion": round(c.tiempo_fin_atencion, 4),
-                "juez_asignado": "Enzo",
-                "tiempo_en_cola": round(c.tiempo_en_cola, 4),
-                "rnd_categoria": round(c.rnd_categoria, 6),
-                "rnd_atencion_1": round(c.rnd_atencion_1, 6) if c.rnd_atencion_1 else "-",
-                "rnd_atencion_2": round(c.rnd_atencion_2, 6) if c.rnd_atencion_2 else "-",
-                "tiempo_atencion": round(c.tiempo_atencion, 4) if c.tiempo_atencion else "-",
-                "rnd_llegada": round(c.rnd_llegada, 6)
-            })
-        if refuerzo.competidor_actual:
-            c = refuerzo.competidor_actual
-            competidores_activos.append({
-                "id": c.id,
-                "categoria": c.categoria,
-                "tiempo_llegada": round(c.tiempo_llegada, 4),
-                "estado": f"Evaluación ({ref_estado})",
-                "tiempo_inicio_atencion": round(c.tiempo_inicio_atencion, 4),
-                "tiempo_fin_atencion": round(c.tiempo_fin_atencion, 4),
-                "juez_asignado": "Refuerzo",
-                "tiempo_en_cola": round(c.tiempo_en_cola, 4),
-                "rnd_categoria": round(c.rnd_categoria, 6),
-                "rnd_atencion_1": round(c.rnd_atencion_1, 6) if c.rnd_atencion_1 else "-",
-                "rnd_atencion_2": round(c.rnd_atencion_2, 6) if c.rnd_atencion_2 else "-",
-                "tiempo_atencion": round(c.tiempo_atencion, 4) if c.tiempo_atencion else "-",
-                "rnd_llegada": round(c.rnd_llegada, 6)
-            })
+        for juez_obj in [julian, enzo, refuerzo]:
+            if juez_obj.competidor_actual:
+                c = juez_obj.competidor_actual
+                est_juez_str = "SUSP" if juez_obj.estado == 'Interrumpido' else "SA"
+                competidores_activos.append({
+                    "id": c.id,
+                    "categoria": c.categoria,
+                    "tiempo_llegada": round(c.tiempo_llegada, 4),
+                    "estado": f"{est_juez_str}({juez_obj.nombre[:3]})",
+                    "tiempo_inicio_atencion": round(c.tiempo_inicio_atencion, 4),
+                    "tiempo_fin_atencion": round(c.tiempo_fin_atencion, 4),
+                    "juez_asignado": juez_obj.nombre,
+                    "tiempo_en_cola": round(c.tiempo_en_cola, 4),
+                    "rnd_categoria": round(c.rnd_categoria, 2),
+                    "rnd_atencion_1": round(c.rnd_atencion_1, 2) if c.rnd_atencion_1 else "-",
+                    "rnd_atencion_2": round(c.rnd_atencion_2, 2) if c.rnd_atencion_2 else "-",
+                    "tiempo_atencion": round(c.tiempo_atencion, 4) if c.tiempo_atencion else "-",
+                    "rnd_llegada": round(c.rnd_llegada, 2)
+                })
+
+        # Inicializar variables aleatorias del evento actual
+        rnd_llegada_val = '-'
+        t_llegada_val = '-'
+        rnd_cat_val = '-'
+        cat_val = '-'
+        
+        # Jueces por separado
+        rnd_at1_julian = '-'
+        rnd_at2_julian = '-'
+        t_at_julian = '-'
+        rnd_at1_enzo = '-'
+        rnd_at2_enzo = '-'
+        t_at_enzo = '-'
+        rnd_at1_refuerzo = '-'
+        rnd_at2_refuerzo = '-'
+        t_at_refuerzo = '-'
+        
+        rnd_corte_val = '-'
+        t_corte_val = '-'
+        rnd_turno_val = '-'
+        t_turno_val = '-'
+        rk_e0_val = '-'
+        rk_t_final_val = '-'
+
+        if detalles_evento:
+            rnd_llegada_val = detalles_evento.get('var_rnd_llegada', '-')
+            t_llegada_val = detalles_evento.get('var_t_llegada', '-')
+            rnd_cat_val = detalles_evento.get('var_rnd_cat', '-')
+            cat_val = detalles_evento.get('var_cat', '-')
+            
+            # Julián
+            rnd_at1_julian = detalles_evento.get('var_rnd_at1_julian', '-')
+            rnd_at2_julian = detalles_evento.get('var_rnd_at2_julian', '-')
+            t_at_julian = detalles_evento.get('var_t_at_julian', '-')
+            
+            # Enzo
+            rnd_at1_enzo = detalles_evento.get('var_rnd_at1_enzo', '-')
+            rnd_at2_enzo = detalles_evento.get('var_rnd_at2_enzo', '-')
+            t_at_enzo = detalles_evento.get('var_t_at_enzo', '-')
+            
+            # Refuerzo
+            rnd_at1_refuerzo = detalles_evento.get('var_rnd_at1_refuerzo', '-')
+            rnd_at2_refuerzo = detalles_evento.get('var_rnd_at2_refuerzo', '-')
+            t_at_refuerzo = detalles_evento.get('var_t_at_refuerzo', '-')
+            
+            rnd_corte_val = detalles_evento.get('var_rnd_corte', '-')
+            t_corte_val = detalles_evento.get('var_t_corte', '-')
+            rnd_turno_val = detalles_evento.get('var_rnd_turno', '-')
+            t_turno_val = detalles_evento.get('var_t_turno', '-')
+            rk_e0_val = detalles_evento.get('rk_e0', '-')
+            rk_t_final_val = detalles_evento.get('rk_t_final', '-')
+
+        def format_float(val, dec=4):
+            if isinstance(val, (int, float)):
+                return round(val, dec)
+            return val
+
+        # Formatear la información de los 15 slots fijos de competidores
+        slots_info = []
+        for idx in range(15):
+            comp = competidores_slots[idx]
+            if comp is None:
+                slots_info.append({"estado": "-", "hora_llegada": "-"})
+            else:
+                if comp in cola:
+                    est_str = f"EA({comp.categoria[0]})"
+                elif julian.competidor_actual == comp:
+                    est_str = "SUSP(Jul)" if julian.estado == 'Interrumpido' else "SA(Jul)"
+                elif enzo.competidor_actual == comp:
+                    est_str = "SUSP(Enz)" if enzo.estado == 'Interrumpido' else "SA(Enz)"
+                elif refuerzo.competidor_actual == comp:
+                    est_str = "SUSP(Ref)" if refuerzo.estado == 'Interrumpido' else "SA(Ref)"
+                else:
+                    est_str = "-"
+                slots_info.append({
+                    "estado": est_str,
+                    "hora_llegada": round(comp.tiempo_llegada, 4)
+                })
 
         fila = {
             "iteracion":          iteracion,
             "evento":             evento,
             "reloj":              round(reloj, 4),
             
+            # Variables Aleatorias Generadas (Llegada)
+            "var_rnd_llegada":    rnd_llegada_val,
+            "var_t_llegada":      format_float(t_llegada_val, 4),
+            "var_rnd_cat":        rnd_cat_val,
+            "var_cat":            cat_val,
+            
+            # Variables de Atención Julián
+            "var_rnd_at1_julian": rnd_at1_julian,
+            "var_rnd_at2_julian": rnd_at2_julian,
+            "var_t_at_julian":    format_float(t_at_julian, 4),
+            
+            # Variables de Atención Enzo
+            "var_rnd_at1_enzo":   rnd_at1_enzo,
+            "var_rnd_at2_enzo":   rnd_at2_enzo,
+            "var_t_at_enzo":      format_float(t_at_enzo, 4),
+            
+            # Variables de Atención Refuerzo
+            "var_rnd_at1_refuerzo": rnd_at1_refuerzo,
+            "var_rnd_at2_refuerzo": rnd_at2_refuerzo,
+            "var_t_at_refuerzo":  format_float(t_at_refuerzo, 4),
+            
+            # Variables de Corte e Integración RK4
+            "var_rnd_corte":      rnd_corte_val,
+            "var_t_corte":        format_float(t_corte_val, 4),
+            "var_rnd_turno":      rnd_turno_val,
+            "var_t_turno":        format_float(t_turno_val, 4),
+            "rk_e0":              rk_e0_val,
+            "rk_t_final":         rk_t_final_val,
+
+            # Próximos eventos Clocks
             "prox_llegada":       prox_llegada_str,
             "prox_corte":         prox_corte_str,
             "fin_corte":          fin_corte_str,
@@ -285,6 +407,7 @@ def simular(params):
             "llegada_refuerzo":   round(refuerzo.tiempo_llegada_refuerzo, 4) if refuerzo.convocado else '-',
             "fin_turno_refuerzo": ref_fin_turno,
             
+            # Servidores
             "julian_estado":   julian_estado,
             "julian_comp_id":  julian_comp,
             "julian_comp_cat": julian_cat,
@@ -297,23 +420,45 @@ def simular(params):
             "ref_comp_id":     ref_comp,
             "ref_comp_cat":    '-',
             
+            # Cola
             "cola_tamanio":  len(cola),
             "cola_detalle":  cola_str,
             "en_corte":   'Sí' if en_corte else 'No',
             
-            "atendidos_julian":   julian.competidores_atendidos,
-            "atendidos_enzo":     enzo.competidores_atendidos,
-            "atendidos_refuerzo": refuerzo.competidores_atendidos,
+            # Acumuladores y Contadores
+            "acum_espera_ini":    round(acum_espera_ini, 4),
+            "cont_espera_ini":    cont_espera_ini,
+            "acum_espera_avan":   round(acum_espera_avan, 4),
+            "cont_espera_avan":   cont_espera_avan,
+            "acum_ocupacion_julian": round(acum_ocupacion_julian, 4),
+            "acum_ocupacion_enzo":   round(acum_ocupacion_enzo, 4),
+            "acum_ocupacion_refuerzo": round(acum_ocupacion_refuerzo, 4),
+            "cont_atendidos_julian": julian.competidores_atendidos,
+            "cont_atendidos_enzo":   enzo.competidores_atendidos,
+            "cont_atendidos_refuerzo": refuerzo.competidores_atendidos,
+            "max_espera":         round(max_espera, 4),
+            
+            # Slots estáticos de competidores
+            "slots":              slots_info,
+            
             "competidores_activos": competidores_activos
         }
         
         if refuerzo.competidor_actual:
             fila["ref_comp_cat"] = refuerzo.competidor_actual.categoria
             
-        if detalles_evento:
-            fila.update(detalles_evento)
-        
         return fila
+
+    # ── AGREGAR FILA INICIAL (Inicio) ────────────────────────────────────────
+    detalles_inicio = {
+        'var_rnd_llegada': rnd_llegada,
+        'var_t_llegada': t_llegada,
+        'rk_e0': E0_inicial,
+        'rk_t_final': round(t_final_rk_inicial, 4)
+    }
+    fila_inicio = construir_fila('Inicio', detalles_inicio)
+    if ITER_DESDE <= 0 or ITER_DESDE == 1:
+        vector_estado.append(fila_inicio)
 
     # ─────────────────────────────────────────────────────────────────────────
     #  LOOP DE EVENTOS
@@ -350,12 +495,19 @@ def simular(params):
         
         evento_tipo, t_evento = min(eventos_posibles, key=lambda x: x[1])
         
+        # Calcular delta_t para acumular ocupación del paso que está terminando
+        t_limitado = min(t_evento, T_MAX)
+        delta_t = t_limitado - reloj
+        if delta_t > 0:
+            if julian.estado in ('Ocupado', 'Interrumpido'):
+                acum_ocupacion_julian += delta_t
+            if enzo.estado in ('Ocupado', 'Interrumpido'):
+                acum_ocupacion_enzo += delta_t
+            if refuerzo.estado in ('Ocupado', 'Interrumpido'):
+                acum_ocupacion_refuerzo += delta_t
+        
         if t_evento > T_MAX:
             reloj = T_MAX
-            for juez in [julian, enzo, refuerzo]:
-                if juez._inicio_periodo_ocupado is not None:
-                    juez.tiempo_ocupado_total += reloj - juez._inicio_periodo_ocupado
-                    juez._inicio_periodo_ocupado = None
             fila_final = construir_fila('Fin simulación (tiempo X)', es_ultima=True)
             break
         
@@ -365,95 +517,83 @@ def simular(params):
         
         # ── EVENTO: LLEGADA ──────────────────────────────────────────────────
         if evento_tipo == 'llegada_competidor':
-            rnd_cat = random.random()
-            comp = Competidor(reloj, rnd_cat, round(rnd_llegada, 6))
+            rnd_cat = round(random.random(), 2)
+            comp = Competidor(reloj, rnd_cat, rnd_llegada)
             
-            detalles['rnd_categoria']  = round(rnd_cat, 6)
-            detalles['comp_id_nuevo']  = comp.id
-            detalles['comp_cat_nuevo'] = comp.categoria
+            # Asignar slot fijo para esta fila
+            ocupar_slot(comp)
+            
+            detalles['var_rnd_cat']  = rnd_cat
+            detalles['var_cat'] = comp.categoria
             
             cola.append(comp)
             
             if len(cola) >= UMBRAL_REFUERZO and not refuerzo.activo and not refuerzo.convocado:
                 refuerzo.convocado = True
                 refuerzo.tiempo_llegada_refuerzo = reloj + 10
-                detalles['evento_refuerzo'] = f'Convocado! Llega t={round(reloj+10,2)}'
             
             if not en_corte:
-                asignar_desde_cola()
+                asignar_desde_cola(detalles)
             
-            t_inter, rnd_llegada = generar_exponencial(MEDIA_LLEGADAS)
+            t_inter, rnd_llegada_sig = generar_exponencial(MEDIA_LLEGADAS)
             t_prox_llegada = reloj + t_inter
-            detalles['rnd_llegada']   = round(rnd_llegada, 6)
-            detalles['prox_llegada_calc'] = round(t_prox_llegada, 4)
+            
+            detalles['var_rnd_llegada'] = rnd_llegada_sig
+            detalles['var_t_llegada']   = t_inter
+            rnd_llegada = rnd_llegada_sig
             
         # ── EVENTO: FIN ATENCIÓN JULIÁN ──────────────────────────────────────
         elif evento_tipo == 'fin_atencion_julian':
             comp = julian.competidor_actual
-            
-            if comp.categoria == 'Inicial':
-                lista_tiempos_cola_ini.append(comp.tiempo_en_cola)
-            else:
-                lista_tiempos_cola_avan.append(comp.tiempo_en_cola)
-            
-            julian.tiempo_ocupado_total += reloj - julian._inicio_periodo_ocupado
             julian.competidores_atendidos += 1
             
             detalles['comp_id_fin']  = comp.id
             detalles['comp_cat_fin'] = comp.categoria
             detalles['tiempo_cola_comp'] = round(comp.tiempo_en_cola, 4)
             
+            # Liberar slot fijo del competidor que abandona el sistema
+            liberar_slot(comp)
+            
             julian.estado = 'Libre'
             julian.competidor_actual = None
             julian.tiempo_fin_atencion = None
-            julian._inicio_periodo_ocupado = None
             
             if not en_corte:
-                asignar_desde_cola()
+                asignar_desde_cola(detalles)
                 
         # ── EVENTO: FIN ATENCIÓN ENZO ────────────────────────────────────────
         elif evento_tipo == 'fin_atencion_enzo':
             comp = enzo.competidor_actual
-            
-            if comp.categoria == 'Inicial':
-                lista_tiempos_cola_ini.append(comp.tiempo_en_cola)
-            else:
-                lista_tiempos_cola_avan.append(comp.tiempo_en_cola)
-            
-            enzo.tiempo_ocupado_total += reloj - enzo._inicio_periodo_ocupado
             enzo.competidores_atendidos += 1
             
             detalles['comp_id_fin']  = comp.id
             detalles['comp_cat_fin'] = comp.categoria
             detalles['tiempo_cola_comp'] = round(comp.tiempo_en_cola, 4)
             
+            # Liberar slot fijo
+            liberar_slot(comp)
+            
             enzo.estado = 'Libre'
             enzo.competidor_actual = None
             enzo.tiempo_fin_atencion = None
-            enzo._inicio_periodo_ocupado = None
             
             if not en_corte:
-                asignar_desde_cola()
+                asignar_desde_cola(detalles)
                 
         # ── EVENTO: FIN ATENCIÓN REFUERZO ────────────────────────────────────
         elif evento_tipo == 'fin_atencion_refuerzo':
             comp = refuerzo.competidor_actual
-            
-            if comp.categoria == 'Inicial':
-                lista_tiempos_cola_ini.append(comp.tiempo_en_cola)
-            else:
-                lista_tiempos_cola_avan.append(comp.tiempo_en_cola)
-            
-            refuerzo.tiempo_ocupado_total += reloj - refuerzo._inicio_periodo_ocupado
             refuerzo.competidores_atendidos += 1
             
             detalles['comp_id_fin']  = comp.id
             detalles['comp_cat_fin'] = comp.categoria
             detalles['tiempo_cola_comp'] = round(comp.tiempo_en_cola, 4)
             
+            # Liberar slot fijo
+            liberar_slot(comp)
+            
             refuerzo.competidor_actual = None
             refuerzo.tiempo_fin_atencion = None
-            refuerzo._inicio_periodo_ocupado = None
             
             if refuerzo.debe_retirarse:
                 refuerzo.activo = False
@@ -463,7 +603,7 @@ def simular(params):
             else:
                 refuerzo.estado = 'Libre'
                 if not en_corte:
-                    asignar_desde_cola()
+                    asignar_desde_cola(detalles)
                     
         # ── EVENTO: LLEGADA DEL REFUERZO ─────────────────────────────────────
         elif evento_tipo == 'llegada_refuerzo':
@@ -476,12 +616,11 @@ def simular(params):
             refuerzo.rnd_duracion_turno = rnd_dur
             refuerzo.tiempo_fin_turno = reloj + dur_turno
             
-            detalles['rnd_dur_refuerzo'] = round(rnd_dur, 6)
-            detalles['dur_turno_ref']    = round(dur_turno, 4)
-            detalles['fin_turno_ref']    = round(refuerzo.tiempo_fin_turno, 4)
+            detalles['var_rnd_turno'] = rnd_dur
+            detalles['var_t_turno']   = dur_turno
             
             if not en_corte:
-                asignar_desde_cola()
+                asignar_desde_cola(detalles)
                 
         # ── EVENTO: FIN TURNO REFUERZO ───────────────────────────────────────
         elif evento_tipo == 'fin_turno_refuerzo':
@@ -499,8 +638,10 @@ def simular(params):
                 renovacion, rnd_ren = generar_uniforme(10, 18)
                 refuerzo.tiempo_fin_turno = reloj + renovacion
                 refuerzo.rnd_duracion_turno = rnd_ren
+                
+                detalles['var_rnd_turno'] = rnd_ren
+                detalles['var_t_turno']   = renovacion
                 detalles['ref_decision'] = f'Renovó turno {round(renovacion,2)} min'
-                detalles['rnd_renovacion'] = round(rnd_ren, 6)
                 
         # ── EVENTO: CORTE ELÉCTRICO ──────────────────────────────────────────
         elif evento_tipo == 'corte_electrico':
@@ -508,9 +649,8 @@ def simular(params):
             dur_corte, rnd_corte = generar_exponencial(MEDIA_CORTE)
             t_fin_corte = reloj + dur_corte
             
-            detalles['rnd_corte']   = round(rnd_corte, 6)
-            detalles['dur_corte']   = round(dur_corte, 4)
-            detalles['fin_corte_calc'] = round(t_fin_corte, 4)
+            detalles['var_rnd_corte'] = rnd_corte
+            detalles['var_t_corte']   = dur_corte
             
             for juez in [julian, enzo, refuerzo]:
                 if juez.estado == 'Ocupado':
@@ -532,47 +672,46 @@ def simular(params):
             tiempo_siguiente_corte, tabla_rk_nueva = runge_kutta_4(E0_nuevo, H_RK)
             t_prox_corte = reloj + tiempo_siguiente_corte
             
+            t_final_rk_nueva = tabla_rk_nueva[-1]['t'] if tabla_rk_nueva else 0.0
+            
             todas_las_tablas_rk.append({
                 "titulo": f"RK4 - Corte desde reloj={round(reloj,2)} (E0={E0_nuevo}, h={H_RK})",
                 "filas": tabla_rk_nueva
             })
             
-            detalles['nuevo_e0']         = round(E0_nuevo, 4)
+            detalles['rk_e0']      = round(E0_nuevo, 4)
+            detalles['rk_t_final'] = round(t_final_rk_nueva, 4)
             detalles['prox_corte_calc']  = round(t_prox_corte, 4)
             
-            asignar_desde_cola()
+            asignar_desde_cola(detalles)
             
         fila = construir_fila(evento_tipo, detalles)
         if ITER_DESDE <= iteracion < ITER_DESDE + ITER_CANT:
             vector_estado.append(fila)
 
     if fila_final is None:
-        for juez in [julian, enzo, refuerzo]:
-            if juez._inicio_periodo_ocupado is not None:
-                juez.tiempo_ocupado_total += reloj - juez._inicio_periodo_ocupado
-                juez._inicio_periodo_ocupado = None
         fila_final = construir_fila('Fin simulación (límite iteraciones)', es_ultima=True)
 
     vector_estado.append({**fila_final, "es_ultima_fila": True})
     
-    # Métricas
+    # Métricas finales
     tiempo_total_sim = reloj
     
-    prom_cola_ini  = (sum(lista_tiempos_cola_ini) / len(lista_tiempos_cola_ini)
-                      if lista_tiempos_cola_ini else 0)
-    prom_cola_avan = (sum(lista_tiempos_cola_avan) / len(lista_tiempos_cola_avan)
-                      if lista_tiempos_cola_avan else 0)
+    prom_cola_ini  = (acum_espera_ini / cont_espera_ini
+                      if cont_espera_ini > 0 else 0)
+    prom_cola_avan = (acum_espera_avan / cont_espera_avan
+                      if cont_espera_avan > 0 else 0)
     prom_cola_total = (
-        (sum(lista_tiempos_cola_ini) + sum(lista_tiempos_cola_avan))
-        / (len(lista_tiempos_cola_ini) + len(lista_tiempos_cola_avan))
-        if (lista_tiempos_cola_ini or lista_tiempos_cola_avan) else 0
+        (acum_espera_ini + acum_espera_avan)
+        / (cont_espera_ini + cont_espera_avan)
+        if (cont_espera_ini + cont_espera_avan) > 0 else 0
     )
 
-    pct_ocupacion_enzo = (enzo.tiempo_ocupado_total / tiempo_total_sim * 100
+    pct_ocupacion_enzo = (acum_ocupacion_enzo / tiempo_total_sim * 100
                           if tiempo_total_sim > 0 else 0)
-    pct_ocupacion_julian = (julian.tiempo_ocupado_total / tiempo_total_sim * 100
+    pct_ocupacion_julian = (acum_ocupacion_julian / tiempo_total_sim * 100
                             if tiempo_total_sim > 0 else 0)
-    pct_ocupacion_refuerzo = (refuerzo.tiempo_ocupado_total / tiempo_total_sim * 100
+    pct_ocupacion_refuerzo = (acum_ocupacion_refuerzo / tiempo_total_sim * 100
                               if tiempo_total_sim > 0 else 0)
 
     atendidos_julian   = julian.competidores_atendidos
@@ -580,14 +719,9 @@ def simular(params):
     atendidos_refuerzo = refuerzo.competidores_atendidos
     total_atendidos    = atendidos_julian + atendidos_enzo + atendidos_refuerzo
 
-    total_ini  = len(lista_tiempos_cola_ini)
-    total_avan = len(lista_tiempos_cola_avan)
+    total_ini  = cont_espera_ini
+    total_avan = cont_espera_avan
     
-    max_espera = max(
-        (max(lista_tiempos_cola_ini)  if lista_tiempos_cola_ini  else 0),
-        (max(lista_tiempos_cola_avan) if lista_tiempos_cola_avan else 0)
-    )
-
     metricas = {
         "prom_cola_inicial":       round(prom_cola_ini, 4),
         "prom_cola_avanzado":      round(prom_cola_avan, 4),

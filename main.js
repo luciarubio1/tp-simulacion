@@ -143,7 +143,7 @@ function renderizarVectorEstado() {
   if (stateVectorData.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="19" class="empty-state">
+        <td colspan="83" class="empty-state">
           <i>📊</i>
           <p>No se encontraron resultados en el rango de iteraciones seleccionado.</p>
         </td>
@@ -183,34 +183,122 @@ function renderizarVectorEstado() {
       return '-';
     };
 
+    const formatRnd = (val) => {
+      if (typeof val === 'number') {
+        return val.toFixed(2);
+      }
+      return val;
+    };
+
+    const formatVal = (val) => {
+      if (typeof val === 'number') {
+        return val.toFixed(4);
+      }
+      return val;
+    };
+
+    const formatSlotEst = (est) => {
+      if (est === '-') return '<span style="color: var(--text-muted);">-</span>';
+      if (est.startsWith('EA')) return `<span style="color: var(--accent-cyan); font-weight:600; font-size: 0.8rem;">${est}</span>`;
+      if (est.startsWith('SA')) return `<span style="color: var(--accent-emerald); font-weight:600; font-size: 0.8rem;">${est}</span>`;
+      if (est.startsWith('SUSP')) return `<span style="color: var(--accent-rose); font-weight:600; font-size: 0.8rem;">${est}</span>`;
+      return est;
+    };
+
+    let slotsHtml = '';
+    if (fila.slots && fila.slots.length > 0) {
+      fila.slots.forEach(s => {
+        slotsHtml += `
+          <td style="background-color: rgba(16, 185, 129, 0.01); text-align: center;">${formatSlotEst(s.estado)}</td>
+          <td class="code-val" style="background-color: rgba(16, 185, 129, 0.01); text-align: center; font-size: 0.8rem;">${s.hora_llegada}</td>
+        `;
+      });
+    } else {
+      for (let i = 0; i < 15; i++) {
+        slotsHtml += `
+          <td style="background-color: rgba(16, 185, 129, 0.01); text-align: center; color: var(--text-muted);">-</td>
+          <td class="code-val" style="background-color: rgba(16, 185, 129, 0.01); text-align: center; color: var(--text-muted); font-size: 0.8rem;">-</td>
+        `;
+      }
+    }
+
     tr.innerHTML = `
       <td class="code-val" style="font-weight: 600;">${fila.iteracion}</td>
       <td style="font-weight: 500; font-size: 0.83rem;">${fila.evento}</td>
       <td class="code-val">${fila.reloj}</td>
-      <td class="code-val">${fila.prox_llegada}</td>
-      <td class="code-val">${fila.prox_corte}</td>
-      <td class="code-val">${fila.fin_corte}</td>
-      
-      <!-- Julián -->
-      <td>${badgeJuez(fila.julian_estado)}</td>
-      <td class="code-val">${fila.julian_comp_id}</td>
-      <td class="code-val">${fila.fin_aten_julian}</td>
-      
-      <!-- Enzo -->
-      <td>${badgeJuez(fila.enzo_estado)}</td>
-      <td class="code-val">${fila.enzo_comp_id}</td>
-      <td class="code-val">${fila.fin_aten_enzo}</td>
-      
-      <!-- Refuerzo -->
-      <td>${badgeJuez(fila.ref_estado)}</td>
-      <td class="code-val">${fila.ref_comp_id}</td>
-      <td class="code-val">${fila.fin_aten_refuerzo}</td>
-      <td class="code-val">${fila.fin_turno_refuerzo}</td>
-      
+
+      <!-- Llegada Competidor -->
+      <td class="code-val" style="background-color: rgba(6, 182, 212, 0.02); color: var(--accent-cyan); font-weight: 500;">${formatRnd(fila.var_rnd_llegada)}</td>
+      <td class="code-val" style="background-color: rgba(6, 182, 212, 0.02); color: var(--text-primary);">${formatVal(fila.var_t_llegada)}</td>
+      <td class="code-val" style="background-color: rgba(6, 182, 212, 0.02); color: var(--text-primary); font-weight: 500;">${fila.prox_llegada}</td>
+
+      <!-- Categorización -->
+      <td class="code-val" style="background-color: rgba(6, 182, 212, 0.02); color: var(--accent-cyan); font-weight: 500;">${formatRnd(fila.var_rnd_cat)}</td>
+      <td style="background-color: rgba(6, 182, 212, 0.02);">${badgeCat(fila.var_cat)}</td>
+
+      <!-- Fin Atención Julián -->
+      <td class="code-val" style="background-color: rgba(6, 182, 212, 0.02); color: var(--accent-cyan); font-weight: 500;">${formatRnd(fila.var_rnd_at1_julian)}</td>
+      <td class="code-val" style="background-color: rgba(6, 182, 212, 0.02); color: var(--accent-cyan); font-weight: 500;">${formatRnd(fila.var_rnd_at2_julian)}</td>
+      <td class="code-val" style="background-color: rgba(6, 182, 212, 0.02); color: var(--text-primary);">${formatVal(fila.var_t_at_julian)}</td>
+      <td class="code-val" style="background-color: rgba(6, 182, 212, 0.02); color: var(--text-primary); font-weight: 500;">${fila.fin_aten_julian}</td>
+
+      <!-- Fin Atención Enzo -->
+      <td class="code-val" style="background-color: rgba(6, 182, 212, 0.02); color: var(--accent-cyan); font-weight: 500;">${formatRnd(fila.var_rnd_at1_enzo)}</td>
+      <td class="code-val" style="background-color: rgba(6, 182, 212, 0.02); color: var(--accent-cyan); font-weight: 500;">${formatRnd(fila.var_rnd_at2_enzo)}</td>
+      <td class="code-val" style="background-color: rgba(6, 182, 212, 0.02); color: var(--text-primary);">${formatVal(fila.var_t_at_enzo)}</td>
+      <td class="code-val" style="background-color: rgba(6, 182, 212, 0.02); color: var(--text-primary); font-weight: 500;">${fila.fin_aten_enzo}</td>
+
+      <!-- Fin Atención Refuerzo -->
+      <td class="code-val" style="background-color: rgba(6, 182, 212, 0.02); color: var(--accent-cyan); font-weight: 500;">${formatRnd(fila.var_rnd_at1_refuerzo)}</td>
+      <td class="code-val" style="background-color: rgba(6, 182, 212, 0.02); color: var(--accent-cyan); font-weight: 500;">${formatRnd(fila.var_rnd_at2_refuerzo)}</td>
+      <td class="code-val" style="background-color: rgba(6, 182, 212, 0.02); color: var(--text-primary);">${formatVal(fila.var_t_at_refuerzo)}</td>
+      <td class="code-val" style="background-color: rgba(6, 182, 212, 0.02); color: var(--text-primary); font-weight: 500;">${fila.fin_aten_refuerzo}</td>
+
+      <!-- Inconveniente Eléctrico -->
+      <td class="code-val" style="background-color: rgba(239, 68, 68, 0.02); color: var(--text-secondary);">${fila.rk_e0}</td>
+      <td class="code-val" style="background-color: rgba(239, 68, 68, 0.02); color: var(--text-secondary);">${fila.rk_t_final}</td>
+      <td class="code-val" style="background-color: rgba(239, 68, 68, 0.02); color: var(--text-primary); font-weight: 500;">${fila.prox_corte}</td>
+      <td class="code-val" style="background-color: rgba(239, 68, 68, 0.02); color: var(--accent-cyan); font-weight: 500;">${formatRnd(fila.var_rnd_corte)}</td>
+      <td class="code-val" style="background-color: rgba(239, 68, 68, 0.02); color: var(--text-primary);">${formatVal(fila.var_t_corte)}</td>
+      <td class="code-val" style="background-color: rgba(239, 68, 68, 0.02); color: var(--text-primary); font-weight: 500;">${fila.fin_corte}</td>
+
+      <!-- Juez de Refuerzo (Turno) -->
+      <td class="code-val" style="background-color: rgba(245, 158, 11, 0.02); color: var(--text-primary); font-weight: 500;">${fila.llegada_refuerzo}</td>
+      <td class="code-val" style="background-color: rgba(245, 158, 11, 0.02); color: var(--accent-cyan); font-weight: 500;">${formatRnd(fila.var_rnd_turno)}</td>
+      <td class="code-val" style="background-color: rgba(245, 158, 11, 0.02); color: var(--text-primary);">${formatVal(fila.var_t_turno)}</td>
+      <td class="code-val" style="background-color: rgba(245, 158, 11, 0.02); color: var(--text-primary); font-weight: 500;">${fila.fin_turno_refuerzo}</td>
+
+      <!-- Estados Jueces -->
+      <td style="background-color: rgba(59, 130, 246, 0.02);">${badgeJuez(fila.julian_estado)}</td>
+      <td class="code-val" style="background-color: rgba(59, 130, 246, 0.02);">${fila.julian_comp_id}</td>
+      <td style="background-color: rgba(59, 130, 246, 0.02);">${badgeCat(fila.julian_comp_cat)}</td>
+      <td style="background-color: rgba(59, 130, 246, 0.02);">${badgeJuez(fila.enzo_estado)}</td>
+      <td class="code-val" style="background-color: rgba(59, 130, 246, 0.02);">${fila.enzo_comp_id}</td>
+      <td style="background-color: rgba(59, 130, 246, 0.02);">${badgeCat(fila.enzo_comp_cat)}</td>
+      <td style="background-color: rgba(59, 130, 246, 0.02);">${badgeJuez(fila.ref_estado)}</td>
+      <td class="code-val" style="background-color: rgba(59, 130, 246, 0.02);">${fila.ref_comp_id}</td>
+      <td style="background-color: rgba(59, 130, 246, 0.02);">${badgeCat(fila.ref_comp_cat)}</td>
+
       <!-- Cola -->
       <td style="font-weight: 700; color: ${fila.cola_tamanio >= 5 ? 'var(--accent-rose)' : 'var(--text-primary)'};">${fila.cola_tamanio}</td>
       <td style="font-size: 0.75rem; font-family: var(--font-family-mono); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${fila.cola_detalle}">${fila.cola_detalle}</td>
-      
+
+      <!-- Slots Estáticos -->
+      ${slotsHtml}
+
+      <!-- Acumuladores y Contadores -->
+      <td class="code-val" style="background-color: rgba(139, 92, 246, 0.02);">${formatVal(fila.acum_espera_ini)}</td>
+      <td class="code-val" style="background-color: rgba(139, 92, 246, 0.02); font-weight: 500;">${fila.cont_espera_ini}</td>
+      <td class="code-val" style="background-color: rgba(139, 92, 246, 0.02);">${formatVal(fila.acum_espera_avan)}</td>
+      <td class="code-val" style="background-color: rgba(139, 92, 246, 0.02); font-weight: 500;">${fila.cont_espera_avan}</td>
+      <td class="code-val" style="background-color: rgba(139, 92, 246, 0.02); color: var(--accent-rose); font-weight: 600;">${formatVal(fila.max_espera)}</td>
+      <td class="code-val" style="background-color: rgba(139, 92, 246, 0.02);">${formatVal(fila.acum_ocupacion_julian)}</td>
+      <td class="code-val" style="background-color: rgba(139, 92, 246, 0.02);">${formatVal(fila.acum_ocupacion_enzo)}</td>
+      <td class="code-val" style="background-color: rgba(139, 92, 246, 0.02);">${formatVal(fila.acum_ocupacion_refuerzo)}</td>
+      <td class="code-val" style="background-color: rgba(139, 92, 246, 0.02);">${fila.cont_atendidos_julian}</td>
+      <td class="code-val" style="background-color: rgba(139, 92, 246, 0.02);">${fila.cont_atendidos_enzo}</td>
+      <td class="code-val" style="background-color: rgba(139, 92, 246, 0.02);">${fila.cont_atendidos_refuerzo}</td>
+
       <td style="font-weight: 600; color: ${fila.en_corte === 'Sí' ? 'var(--accent-amber)' : 'var(--text-muted)'};">${fila.en_corte}</td>
     `;
 
@@ -316,18 +404,25 @@ function mostrarTablaRKSeleccionada(index) {
 
   const filas = rkTablesData[indexInt].filas;
 
-  filas.forEach(f => {
+  filas.forEach((f, idx) => {
     const tr = document.createElement('tr');
+    
+    // Si es la última fila (donde E supera E0), la destacamos
+    if (idx === filas.length - 1) {
+      tr.style.backgroundColor = 'rgba(245, 158, 11, 0.1)';
+      tr.style.borderLeft = '4px solid var(--accent-amber)';
+    }
+    
     tr.innerHTML = `
       <td class="code-val" style="font-weight:600;">${f.n}</td>
       <td class="code-val">${f.t}</td>
-      <td class="code-val">${f.E}</td>
+      <td class="code-val" style="${idx === filas.length - 1 ? 'color: var(--accent-amber); font-weight:700;' : ''}">${f.E}</td>
       <td class="code-val">${f.k1}</td>
       <td class="code-val">${f.k2}</td>
       <td class="code-val">${f.k3}</td>
       <td class="code-val">${f.k4}</td>
       <td class="code-val" style="color: var(--accent-cyan); font-weight:600;">${f.E_nuevo}</td>
-      <td class="code-val">${f.t_minutos}</td>
+      <td class="code-val" style="${idx === filas.length - 1 ? 'color: var(--accent-amber); font-weight:700;' : ''}">${f.t_minutos}</td>
     `;
     tbody.appendChild(tr);
   });

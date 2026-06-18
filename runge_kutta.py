@@ -60,6 +60,18 @@ def runge_kutta_4(E0, h, max_iter=10000):
         
         # CONDICIÓN DE PARADA: E supera al valor inicial E0
         if E > E0:
+            # Agregar la última fila donde E supera al inicial E0 (sin calcular k's)
+            tabla_rk.append({
+                "n": n + 1,
+                "t": round(t, 6),
+                "E": round(E, 6),
+                "k1": "-",
+                "k2": "-",
+                "k3": "-",
+                "k4": "-",
+                "E_nuevo": "-",
+                "t_minutos": round(t * 8, 4)
+            })
             return t * 8, tabla_rk
     
     return t * 8, tabla_rk
