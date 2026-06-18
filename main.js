@@ -544,3 +544,249 @@ if (document.readyState === 'complete' || document.readyState === 'interactive')
 } else {
   document.addEventListener('DOMContentLoaded', inicializarArrastreTabla);
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  LÓGICA DE EXPORTACIÓN A EXCEL (SHEETJS)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Alternar dropdown de exportación
+function toggleExportDropdown(e) {
+  if (e) e.stopPropagation();
+  const menu = document.getElementById('export-dropdown-menu');
+  menu.classList.toggle('show');
+}
+
+// Cerrar el dropdown si se hace clic fuera del menú
+window.addEventListener('click', (e) => {
+  const menu = document.getElementById('export-dropdown-menu');
+  const btn = document.getElementById('btn-export-excel');
+  if (menu && menu.classList.contains('show') && !menu.contains(e.target) && !btn.contains(e.target)) {
+    menu.classList.remove('show');
+  }
+});
+
+// Validar que existan datos de simulación antes de exportar
+function validarDatosSimulacion() {
+  if (!stateVectorData || stateVectorData.length === 0) {
+    mostrarToast("No hay datos de simulación para descargar. Por favor, ejecuta la simulación primero.", true);
+    return false;
+  }
+  return true;
+}
+
+// Auxiliar para convertir valores a formato numérico nativo de Excel si aplica
+function excelVal(val) {
+  if (val === undefined || val === null || val === "-") return "-";
+  const num = Number(val);
+  return isNaN(num) ? val : num;
+}
+
+// Mapear el vector de estado a objetos con nombres de columna legibles
+function mapStateVectorToExcel(data) {
+  return data.map(fila => {
+    const row = {
+      "Iteración": excelVal(fila.iteracion),
+      "Evento": fila.evento,
+      "Reloj (min)": excelVal(fila.reloj),
+      
+      // Llegada Competidor
+      "RND Llegada": excelVal(fila.var_rnd_llegada),
+      "T. Llegada": excelVal(fila.var_t_llegada),
+      "Próx. Llegada": excelVal(fila.prox_llegada),
+      
+      // Categorización
+      "RND Cat": excelVal(fila.var_rnd_cat),
+      "Categoría": fila.var_cat,
+      
+      // Fin Atención Julián
+      "RND At1 (Julián)": excelVal(fila.var_rnd_at1_julian),
+      "RND At2 (Julián)": excelVal(fila.var_rnd_at2_julian),
+      "T. At1 (Julián)": excelVal(fila.var_t_at1_julian),
+      "T. At2 (Julián)": excelVal(fila.var_t_at2_julian),
+      "Próx. Fin (Julián)": excelVal(fila.fin_aten_julian),
+      
+      // Fin Atención Enzo
+      "RND At1 (Enzo)": excelVal(fila.var_rnd_at1_enzo),
+      "RND At2 (Enzo)": excelVal(fila.var_rnd_at2_enzo),
+      "T. At1 (Enzo)": excelVal(fila.var_t_at1_enzo),
+      "T. At2 (Enzo)": excelVal(fila.var_t_at2_enzo),
+      "Próx. Fin (Enzo)": excelVal(fila.fin_aten_enzo),
+      
+      // Fin Atención Refuerzo
+      "RND At1 (Refuerzo)": excelVal(fila.var_rnd_at1_refuerzo),
+      "RND At2 (Refuerzo)": excelVal(fila.var_rnd_at2_refuerzo),
+      "T. At1 (Refuerzo)": excelVal(fila.var_t_at1_refuerzo),
+      "T. At2 (Refuerzo)": excelVal(fila.var_t_at2_refuerzo),
+      "Próx. Fin (Refuerzo)": excelVal(fila.fin_aten_refuerzo),
+      
+      // Inconveniente Eléctrico
+      "E0 RK (Corte)": excelVal(fila.rk_e0),
+      "t_final RK (Corte)": excelVal(fila.rk_t_final),
+      "Próx. Corte": excelVal(fila.prox_corte),
+      "RND Corte": excelVal(fila.var_rnd_corte),
+      "Dur. Corte": excelVal(fila.var_t_corte),
+      "Fin Corte": excelVal(fila.fin_corte),
+      
+      // Juez de Refuerzo (Turno)
+      "Llegada Refuerzo": excelVal(fila.llegada_refuerzo),
+      "RND Turno (Refuerzo)": excelVal(fila.var_rnd_turno),
+      "Dur. Turno (Refuerzo)": excelVal(fila.var_t_turno),
+      "Fin Turno (Refuerzo)": excelVal(fila.fin_turno_refuerzo),
+      
+      // Estados Jueces
+      "Estado Julián": fila.julian_estado,
+      "Comp. Julián ID": excelVal(fila.julian_comp_id),
+      "Cat. Comp. Julián": fila.julian_comp_cat,
+      
+      "Estado Enzo": fila.enzo_estado,
+      "Comp. Enzo ID": excelVal(fila.enzo_comp_id),
+      "Cat. Comp. Enzo": fila.enzo_comp_cat,
+      
+      "Estado Refuerzo": fila.ref_estado,
+      "Comp. Refuerzo ID": excelVal(fila.ref_comp_id),
+      "Cat. Comp. Refuerzo": fila.ref_comp_cat,
+      
+      // Cola
+      "Cola Tamaño": excelVal(fila.cola_tamanio),
+      "Cola Detalle": fila.cola_detalle,
+    };
+    
+    // Slots de Competidores Activos (15 posiciones)
+    for (let i = 0; i < 15; i++) {
+      const slot = fila.slots && fila.slots[i] ? fila.slots[i] : {estado: "-", hora_llegada: "-"};
+      row[`Slot ${i+1} Estado`] = slot.estado;
+      row[`Slot ${i+1} Llegada`] = excelVal(slot.hora_llegada);
+    }
+    
+    // Acumuladores y contadores
+    row["Acum. Espera Ini"] = excelVal(fila.acum_espera_ini);
+    row["Cont. Espera Ini"] = excelVal(fila.cont_espera_ini);
+    row["Acum. Espera Avan"] = excelVal(fila.acum_espera_avan);
+    row["Cont. Espera Avan"] = excelVal(fila.cont_espera_avan);
+    row["Max Espera"] = excelVal(fila.max_espera);
+    row["Acum. Ocupación Jul"] = excelVal(fila.acum_ocupacion_julian);
+    row["Acum. Ocupación Enz"] = excelVal(fila.acum_ocupacion_enzo);
+    row["Acum. Ocupación Ref"] = excelVal(fila.acum_ocupacion_refuerzo);
+    row["Cont. Atendidos Jul"] = excelVal(fila.cont_atendidos_julian);
+    row["Cont. Atendidos Enz"] = excelVal(fila.cont_atendidos_enzo);
+    row["Cont. Atendidos Ref"] = excelVal(fila.cont_atendidos_refuerzo);
+    row["¿En Corte?"] = fila.en_corte;
+    
+    return row;
+  });
+}
+
+// Mapear una tabla de Runge-Kutta a nombres de columna legibles
+function mapRkTableToExcel(filas) {
+  return filas.map(f => ({
+    "Paso (n)": excelVal(f.n),
+    "Tiempo (t)": excelVal(f.t),
+    "E(t)": excelVal(f.E),
+    "k1": excelVal(f.k1),
+    "k2": excelVal(f.k2),
+    "k3": excelVal(f.k3),
+    "k4": excelVal(f.k4),
+    "E(t + h)": excelVal(f.E_nuevo),
+    "Reloj Equiv. (min)": excelVal(f.t_minutos)
+  }));
+}
+
+// 1. Descargar todo en un mismo Excel en diferentes hojas
+function descargarTodoExcel() {
+  if (!validarDatosSimulacion()) return;
+  
+  // Cerrar el dropdown
+  document.getElementById('export-dropdown-menu').classList.remove('show');
+  
+  mostrarToast("Generando Excel completo...");
+  
+  setTimeout(() => {
+    try {
+      const wb = XLSX.utils.book_new();
+      
+      // Agregar Vector de Estado
+      const stateVectorSheetData = mapStateVectorToExcel(stateVectorData);
+      const wsStateVector = XLSX.utils.json_to_sheet(stateVectorSheetData);
+      XLSX.utils.book_append_sheet(wb, wsStateVector, "Vector de Estado");
+      
+      // Agregar Tablas Runge-Kutta (una por cada hoja)
+      if (rkTablesData && rkTablesData.length > 0) {
+        rkTablesData.forEach((tabla, idx) => {
+          const rkSheetData = mapRkTableToExcel(tabla.filas);
+          const wsRk = XLSX.utils.json_to_sheet(rkSheetData);
+          
+          let sheetName = `RK_Corte_${idx + 1}`;
+          if (idx === 0) sheetName = "RK_Primer_Corte";
+          
+          XLSX.utils.book_append_sheet(wb, wsRk, sheetName);
+        });
+      }
+      
+      // Descargar archivo
+      XLSX.writeFile(wb, "Reporte_Simulacion_Completo.xlsx");
+      mostrarToast("¡Descarga de reporte completo iniciada!");
+    } catch (e) {
+      console.error("Error al exportar todo a Excel:", e);
+      mostrarToast("Error al generar el archivo Excel", true);
+    }
+  }, 100);
+}
+
+// 2. Descargar únicamente el Vector de Estado
+function descargarVectorExcel() {
+  if (!validarDatosSimulacion()) return;
+  
+  document.getElementById('export-dropdown-menu').classList.remove('show');
+  
+  mostrarToast("Generando Excel de Vector de Estado...");
+  
+  setTimeout(() => {
+    try {
+      const wb = XLSX.utils.book_new();
+      const stateVectorSheetData = mapStateVectorToExcel(stateVectorData);
+      const wsStateVector = XLSX.utils.json_to_sheet(stateVectorSheetData);
+      XLSX.utils.book_append_sheet(wb, wsStateVector, "Vector de Estado");
+      
+      XLSX.writeFile(wb, "Vector_de_Estado.xlsx");
+      mostrarToast("¡Descarga de Vector de Estado iniciada!");
+    } catch (e) {
+      console.error("Error al exportar Vector de Estado:", e);
+      mostrarToast("Error al generar el archivo Excel", true);
+    }
+  }, 100);
+}
+
+// 3. Descargar únicamente las tablas Runge-Kutta
+function descargarRkExcel() {
+  if (!validarDatosSimulacion()) return;
+  if (!rkTablesData || rkTablesData.length === 0) {
+    mostrarToast("No hay tablas Runge-Kutta calculadas para descargar.", true);
+    return;
+  }
+  
+  document.getElementById('export-dropdown-menu').classList.remove('show');
+  
+  mostrarToast("Generando Excel de Tablas Runge-Kutta...");
+  
+  setTimeout(() => {
+    try {
+      const wb = XLSX.utils.book_new();
+      
+      rkTablesData.forEach((tabla, idx) => {
+        const rkSheetData = mapRkTableToExcel(tabla.filas);
+        const wsRk = XLSX.utils.json_to_sheet(rkSheetData);
+        
+        let sheetName = `RK_Corte_${idx + 1}`;
+        if (idx === 0) sheetName = "RK_Primer_Corte";
+        
+        XLSX.utils.book_append_sheet(wb, wsRk, sheetName);
+      });
+      
+      XLSX.writeFile(wb, "Tablas_Runge_Kutta.xlsx");
+      mostrarToast("¡Descarga de Tablas Runge-Kutta iniciada!");
+    } catch (e) {
+      console.error("Error al exportar tablas RK4:", e);
+      mostrarToast("Error al generar el archivo Excel", true);
+    }
+  }, 100);
+}

@@ -11,6 +11,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
   <!-- CSS Stylesheet -->
   <link rel="stylesheet" href="index.css">
+  <!-- SheetJS for Excel exports -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -145,10 +147,29 @@
           <button class="tab-btn" onclick="switchTab('tab-runge-kutta', this)">Tablas Runge-Kutta 4</button>
           <button class="tab-btn" onclick="switchTab('tab-metricas-detalles', this)">Estadísticas Adicionales</button>
         </div>
-        <button class="btn-toggle-sidebar" id="btn-toggle-layout" onclick="toggleLayoutWidth()">
-          <svg style="width: 1.1rem; height: 1.1rem; fill: currentColor; margin-right: 0.35rem;" viewBox="0 0 24 24"><path d="M4,2H20A2,2 0 0,1 22,4V20A2,2 0 0,1 20,22H4A2,2 0 0,1 2,20V4A2,2 0 0,1 4,2M4,4V20H20V4H4M18,6V18H15V6H18M13,6V18H6V6H13Z"/></svg>
-          <span>Expandir Tabla</span>
-        </button>
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+          <!-- Dropdown Exportar Excel -->
+          <div class="dropdown" id="export-dropdown-container">
+            <button class="btn-export" id="btn-export-excel" onclick="toggleExportDropdown(event)">
+              <svg style="width: 1.1rem; height: 1.1rem; fill: currentColor; margin-right: 0.35rem;" viewBox="0 0 24 24">
+                <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M16,18H8V16H16V18M16,14H8V12H16V14M13,9V3.5L18.5,9H13Z"/>
+              </svg>
+              <span>Exportar Excel</span>
+              <svg style="width: 0.8rem; height: 0.8rem; fill: currentColor; margin-left: 0.25rem;" viewBox="0 0 24 24">
+                <path d="M7.41,8.58L12,13.17L16.59,8.58L18,10L12,16L6,10L7.41,8.58Z"/>
+              </svg>
+            </button>
+            <div class="dropdown-menu" id="export-dropdown-menu">
+              <button onclick="descargarTodoExcel()">📥 Todo en un Excel (Hojas separadas)</button>
+              <button onclick="descargarVectorExcel()">📊 Solo Vector de Estado</button>
+              <button onclick="descargarRkExcel()">📈 Solo Tablas RK4</button>
+            </div>
+          </div>
+          <button class="btn-toggle-sidebar" id="btn-toggle-layout" onclick="toggleLayoutWidth()">
+            <svg style="width: 1.1rem; height: 1.1rem; fill: currentColor; margin-right: 0.35rem;" viewBox="0 0 24 24"><path d="M4,2H20A2,2 0 0,1 22,4V20A2,2 0 0,1 20,22H4A2,2 0 0,1 2,20V4A2,2 0 0,1 4,2M4,4V20H20V4H4M18,6V18H15V6H18M13,6V18H6V6H13Z"/></svg>
+            <span>Expandir Tabla</span>
+          </button>
+        </div>
       </nav>
 
       <!-- TAB 1: VECTOR DE ESTADO -->
