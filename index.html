@@ -18,8 +18,7 @@
   <header>
     <div class="header-container">
       <div class="header-title">
-        <h1>Simulación de Olimpiadas Python 🐍</h1>
-        <p>Trabajo Práctico 5 - Sistemas de Colas & Runge-Kutta 4to Orden</p>
+        <h1>Simulación de Olimpiadas Python</h1>
       </div>
       <div class="group-badge">
         UTN FRC - GRUPO 18 - 4K2
@@ -164,29 +163,8 @@
           </div>
         </div>
         
-        <!-- Toolbar de visibilidad de columnas (Filtro para Profesores) -->
-        <div class="column-toggle-bar">
-          <div class="column-toggle-title">
-            <svg style="width:1.2rem; height:1.2rem; fill:currentColor;" viewBox="0 0 24 24"><path d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"/></svg>
-            <span>Filtro de Columnas Visibles (Simplificación para Profesores)</span>
-          </div>
-          <div class="column-toggle-grid">
-            <button class="column-chip active" onclick="toggleColumnGroup('llegada', this)">Llegada (3 cols)</button>
-            <button class="column-chip active" onclick="toggleColumnGroup('cat', this)">Categorización (2 cols)</button>
-            <button class="column-chip active" onclick="toggleColumnGroup('julian', this)">Atención Julián (5 cols)</button>
-            <button class="column-chip active" onclick="toggleColumnGroup('enzo', this)">Atención Enzo (5 cols)</button>
-            <button class="column-chip active" onclick="toggleColumnGroup('refuerzo', this)">Atención Refuerzo (5 cols)</button>
-            <button class="column-chip active color-rose" onclick="toggleColumnGroup('corte', this)">Corte RK4 (6 cols)</button>
-            <button class="column-chip active color-amber" onclick="toggleColumnGroup('ref-llegada', this)">Auxiliar Refuerzo (4 cols)</button>
-            <button class="column-chip active" onclick="toggleColumnGroup('jueces-est', this)">Estados Jueces (9 cols)</button>
-            <button class="column-chip active" onclick="toggleColumnGroup('cola', this)">Cola (2 cols)</button>
-            <button class="column-chip color-emerald" onclick="toggleColumnGroup('slots', this)">Slots de Competidores (30 cols)</button>
-            <button class="column-chip active color-purple" onclick="toggleColumnGroup('acum', this)">Métricas / Acumuladores (11 cols)</button>
-          </div>
-        </div>
-
         <div class="table-container">
-          <table id="table-vector-estado" class="hide-col-slots">
+          <table id="table-vector-estado">
             <thead>
               <tr>
                 <th rowspan="2">Iter.</th>
@@ -394,7 +372,6 @@
             <tbody id="body-runge-kutta">
               <tr>
                 <td colspan="9" class="empty-state">
-                  <i>📈</i>
                   <p>Selecciona una simulación ejecutada para ver las tablas RK4.</p>
                 </td>
               </tr>
@@ -411,7 +388,7 @@
           <!-- 4 Estadísticas Adicionales Propuestas por el Equipo -->
           <div style="background: var(--bg-card); border-radius: 12px; padding: 1.5rem; border: 1px solid var(--border-color);">
             <h3 style="color: var(--accent-cyan); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
-              ⭐ 4 Estadísticas Adicionales Propuestas
+              Estadísticas Adicionales Propuestas
             </h3>
             
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">

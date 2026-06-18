@@ -479,19 +479,7 @@ function mostrarToast(mensaje, esError = false) {
   }, 4000);
 }
 
-// Alternar visibilidad de grupos de columnas
-function toggleColumnGroup(groupKey, buttonEl) {
-  const table = document.getElementById('table-vector-estado');
-  const classToToggle = 'hide-col-' + groupKey;
-  
-  if (table.classList.contains(classToToggle)) {
-    table.classList.remove(classToToggle);
-    buttonEl.classList.add('active');
-  } else {
-    table.classList.add(classToToggle);
-    buttonEl.classList.remove('active');
-  }
-}
+
 
 // Alternar el ancho de pantalla del layout (Expandir Tabla)
 function toggleLayoutWidth() {
