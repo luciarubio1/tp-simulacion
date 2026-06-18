@@ -140,10 +140,16 @@
       </div>
 
       <!-- Navigation Tabs -->
-      <nav class="tabs-nav">
-        <button class="tab-btn active" onclick="switchTab('tab-vector-estado', this)">Vector de Estado</button>
-        <button class="tab-btn" onclick="switchTab('tab-runge-kutta', this)">Tablas Runge-Kutta 4</button>
-        <button class="tab-btn" onclick="switchTab('tab-metricas-detalles', this)">Estadísticas Adicionales</button>
+      <nav class="tabs-nav" style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="tab-btn active" onclick="switchTab('tab-vector-estado', this)">Vector de Estado</button>
+          <button class="tab-btn" onclick="switchTab('tab-runge-kutta', this)">Tablas Runge-Kutta 4</button>
+          <button class="tab-btn" onclick="switchTab('tab-metricas-detalles', this)">Estadísticas Adicionales</button>
+        </div>
+        <button class="btn-toggle-sidebar" id="btn-toggle-layout" onclick="toggleLayoutWidth()">
+          <svg style="width: 1.1rem; height: 1.1rem; fill: currentColor; margin-right: 0.35rem;" viewBox="0 0 24 24"><path d="M4,2H20A2,2 0 0,1 22,4V20A2,2 0 0,1 20,22H4A2,2 0 0,1 2,20V4A2,2 0 0,1 4,2M4,4V20H20V4H4M18,6V18H15V6H18M13,6V18H6V6H13Z"/></svg>
+          <span>Expandir Tabla</span>
+        </button>
       </nav>
 
       <!-- TAB 1: VECTOR DE ESTADO -->
@@ -158,8 +164,29 @@
           </div>
         </div>
         
+        <!-- Toolbar de visibilidad de columnas (Filtro para Profesores) -->
+        <div class="column-toggle-bar">
+          <div class="column-toggle-title">
+            <svg style="width:1.2rem; height:1.2rem; fill:currentColor;" viewBox="0 0 24 24"><path d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"/></svg>
+            <span>Filtro de Columnas Visibles (Simplificación para Profesores)</span>
+          </div>
+          <div class="column-toggle-grid">
+            <button class="column-chip active" onclick="toggleColumnGroup('llegada', this)">Llegada (3 cols)</button>
+            <button class="column-chip active" onclick="toggleColumnGroup('cat', this)">Categorización (2 cols)</button>
+            <button class="column-chip active" onclick="toggleColumnGroup('julian', this)">Atención Julián (5 cols)</button>
+            <button class="column-chip active" onclick="toggleColumnGroup('enzo', this)">Atención Enzo (5 cols)</button>
+            <button class="column-chip active" onclick="toggleColumnGroup('refuerzo', this)">Atención Refuerzo (5 cols)</button>
+            <button class="column-chip active color-rose" onclick="toggleColumnGroup('corte', this)">Corte RK4 (6 cols)</button>
+            <button class="column-chip active color-amber" onclick="toggleColumnGroup('ref-llegada', this)">Auxiliar Refuerzo (4 cols)</button>
+            <button class="column-chip active" onclick="toggleColumnGroup('jueces-est', this)">Estados Jueces (9 cols)</button>
+            <button class="column-chip active" onclick="toggleColumnGroup('cola', this)">Cola (2 cols)</button>
+            <button class="column-chip color-emerald" onclick="toggleColumnGroup('slots', this)">Slots de Competidores (30 cols)</button>
+            <button class="column-chip active color-purple" onclick="toggleColumnGroup('acum', this)">Métricas / Acumuladores (11 cols)</button>
+          </div>
+        </div>
+
         <div class="table-container">
-          <table id="table-vector-estado">
+          <table id="table-vector-estado" class="hide-col-slots">
             <thead>
               <tr>
                 <th rowspan="2">Iter.</th>
@@ -167,131 +194,134 @@
                 <th rowspan="2">Reloj (min)</th>
                 
                 <!-- Llegada Competidor -->
-                <th colspan="3" style="background-color: rgba(6, 182, 212, 0.08); color: var(--accent-cyan); text-align: center;">Llegada Competidor</th>
+                <th colspan="3" class="col-group-llegada" style="background-color: rgba(6, 182, 212, 0.08); color: var(--accent-cyan); text-align: center;">Llegada Competidor</th>
                 
                 <!-- Categorización -->
-                <th colspan="2" style="background-color: rgba(6, 182, 212, 0.08); color: var(--accent-cyan); text-align: center;">Categorización</th>
+                <th colspan="2" class="col-group-cat" style="background-color: rgba(6, 182, 212, 0.08); color: var(--accent-cyan); text-align: center;">Categorización</th>
                 
                 <!-- Fin Atención Julián -->
-                <th colspan="4" style="background-color: rgba(6, 182, 212, 0.08); color: var(--accent-cyan); text-align: center;">Fin Atención Julián</th>
+                <th colspan="5" class="col-group-julian" style="background-color: rgba(6, 182, 212, 0.08); color: var(--accent-cyan); text-align: center;">Fin Atención Julián</th>
                 
                 <!-- Fin Atención Enzo -->
-                <th colspan="4" style="background-color: rgba(6, 182, 212, 0.08); color: var(--accent-cyan); text-align: center;">Fin Atención Enzo</th>
+                <th colspan="5" class="col-group-enzo" style="background-color: rgba(6, 182, 212, 0.08); color: var(--accent-cyan); text-align: center;">Fin Atención Enzo</th>
                 
                 <!-- Fin Atención Refuerzo -->
-                <th colspan="4" style="background-color: rgba(6, 182, 212, 0.08); color: var(--accent-cyan); text-align: center;">Fin Atención Refuerzo</th>
+                <th colspan="5" class="col-group-refuerzo" style="background-color: rgba(6, 182, 212, 0.08); color: var(--accent-cyan); text-align: center;">Fin Atención Refuerzo</th>
                 
                 <!-- Inconveniente Eléctrico -->
-                <th colspan="6" style="background-color: rgba(239, 68, 68, 0.08); color: var(--accent-rose); text-align: center;">Inconveniente Eléctrico</th>
+                <th colspan="6" class="col-group-corte" style="background-color: rgba(239, 68, 68, 0.08); color: var(--accent-rose); text-align: center;">Inconveniente Eléctrico</th>
                 
                 <!-- Juez de Refuerzo -->
-                <th colspan="4" style="background-color: rgba(245, 158, 11, 0.08); color: var(--accent-amber); text-align: center;">Juez de Refuerzo</th>
+                <th colspan="4" class="col-group-ref-llegada" style="background-color: rgba(245, 158, 11, 0.08); color: var(--accent-amber); text-align: center;">Juez de Refuerzo</th>
                 
                 <!-- Estados Jueces -->
-                <th colspan="9" style="background-color: rgba(59, 130, 246, 0.08); color: #3b82f6; text-align: center;">Estados Jueces</th>
+                <th colspan="9" class="col-group-jueces-est" style="background-color: rgba(59, 130, 246, 0.08); color: #3b82f6; text-align: center;">Estados Jueces</th>
                 
                 <!-- Cola -->
-                <th colspan="2" style="background-color: rgba(107, 114, 128, 0.08); color: #9ca3af; text-align: center;">Cola</th>
+                <th colspan="2" class="col-group-cola" style="background-color: rgba(107, 114, 128, 0.08); color: #9ca3af; text-align: center;">Cola</th>
                 
                 <!-- Competidores en Sistema (Slots) -->
-                <th colspan="30" style="background-color: rgba(16, 185, 129, 0.08); color: var(--accent-emerald); text-align: center;">Competidores en Sistema (Slots Estáticos)</th>
+                <th colspan="30" class="col-group-slots" style="background-color: rgba(16, 185, 129, 0.08); color: var(--accent-emerald); text-align: center;">Competidores en Sistema (Slots Estáticos)</th>
                 
                 <!-- Acumuladores y Contadores -->
-                <th colspan="11" style="background-color: rgba(139, 92, 246, 0.08); color: var(--accent-purple); text-align: center;">Acumuladores y Contadores</th>
+                <th colspan="11" class="col-group-acum" style="background-color: rgba(139, 92, 246, 0.08); color: var(--accent-purple); text-align: center;">Acumuladores y Contadores</th>
                 
                 <th rowspan="2">¿Corte?</th>
               </tr>
               <tr>
                 <!-- Llegada Competidor -->
-                <th style="background-color: rgba(6, 182, 212, 0.03);">RND Lleg.</th>
-                <th style="background-color: rgba(6, 182, 212, 0.03);">T. Lleg.</th>
-                <th style="background-color: rgba(6, 182, 212, 0.03);">Próx. Llegada</th>
+                <th class="col-group-llegada" style="background-color: rgba(6, 182, 212, 0.03);">RND Lleg.</th>
+                <th class="col-group-llegada" style="background-color: rgba(6, 182, 212, 0.03);">T. Lleg.</th>
+                <th class="col-group-llegada" style="background-color: rgba(6, 182, 212, 0.03);">Próx. Llegada</th>
 
                 <!-- Categorización -->
-                <th style="background-color: rgba(6, 182, 212, 0.03);">RND Cat.</th>
-                <th style="background-color: rgba(6, 182, 212, 0.03);">Cat.</th>
+                <th class="col-group-cat" style="background-color: rgba(6, 182, 212, 0.03);">RND Cat.</th>
+                <th class="col-group-cat" style="background-color: rgba(6, 182, 212, 0.03);">Cat.</th>
 
                 <!-- Fin Atención Julián -->
-                <th style="background-color: rgba(6, 182, 212, 0.03);">RND At.1</th>
-                <th style="background-color: rgba(6, 182, 212, 0.03);">RND At.2</th>
-                <th style="background-color: rgba(6, 182, 212, 0.03);">T. At.</th>
-                <th style="background-color: rgba(6, 182, 212, 0.03);">Próx. Fin</th>
+                <th class="col-group-julian" style="background-color: rgba(6, 182, 212, 0.03);">RND At.1</th>
+                <th class="col-group-julian" style="background-color: rgba(6, 182, 212, 0.03);">RND At.2</th>
+                <th class="col-group-julian" style="background-color: rgba(6, 182, 212, 0.03);">T. At. 1</th>
+                <th class="col-group-julian" style="background-color: rgba(6, 182, 212, 0.03);">T. At. 2</th>
+                <th class="col-group-julian" style="background-color: rgba(6, 182, 212, 0.03);">Próx. Fin</th>
 
                 <!-- Fin Atención Enzo -->
-                <th style="background-color: rgba(6, 182, 212, 0.03);">RND At.1</th>
-                <th style="background-color: rgba(6, 182, 212, 0.03);">RND At.2</th>
-                <th style="background-color: rgba(6, 182, 212, 0.03);">T. At.</th>
-                <th style="background-color: rgba(6, 182, 212, 0.03);">Próx. Fin</th>
+                <th class="col-group-enzo" style="background-color: rgba(6, 182, 212, 0.03);">RND At.1</th>
+                <th class="col-group-enzo" style="background-color: rgba(6, 182, 212, 0.03);">RND At.2</th>
+                <th class="col-group-enzo" style="background-color: rgba(6, 182, 212, 0.03);">T. At. 1</th>
+                <th class="col-group-enzo" style="background-color: rgba(6, 182, 212, 0.03);">T. At. 2</th>
+                <th class="col-group-enzo" style="background-color: rgba(6, 182, 212, 0.03);">Próx. Fin</th>
 
                 <!-- Fin Atención Refuerzo -->
-                <th style="background-color: rgba(6, 182, 212, 0.03);">RND At.1</th>
-                <th style="background-color: rgba(6, 182, 212, 0.03);">RND At.2</th>
-                <th style="background-color: rgba(6, 182, 212, 0.03);">T. At.</th>
-                <th style="background-color: rgba(6, 182, 212, 0.03);">Próx. Fin</th>
+                <th class="col-group-refuerzo" style="background-color: rgba(6, 182, 212, 0.03);">RND At.1</th>
+                <th class="col-group-refuerzo" style="background-color: rgba(6, 182, 212, 0.03);">RND At.2</th>
+                <th class="col-group-refuerzo" style="background-color: rgba(6, 182, 212, 0.03);">T. At. 1</th>
+                <th class="col-group-refuerzo" style="background-color: rgba(6, 182, 212, 0.03);">T. At. 2</th>
+                <th class="col-group-refuerzo" style="background-color: rgba(6, 182, 212, 0.03);">Próx. Fin</th>
 
                 <!-- Inconveniente Eléctrico -->
-                <th style="background-color: rgba(239, 68, 68, 0.03);">E0 RK</th>
-                <th style="background-color: rgba(239, 68, 68, 0.03);">t_final RK</th>
-                <th style="background-color: rgba(239, 68, 68, 0.03);">Próx. Corte</th>
-                <th style="background-color: rgba(239, 68, 68, 0.03);">RND Corte</th>
-                <th style="background-color: rgba(239, 68, 68, 0.03);">Dur. Corte</th>
-                <th style="background-color: rgba(239, 68, 68, 0.03);">Fin Corte</th>
+                <th class="col-group-corte" style="background-color: rgba(239, 68, 68, 0.03);">E0 RK</th>
+                <th class="col-group-corte" style="background-color: rgba(239, 68, 68, 0.03);">t_final RK</th>
+                <th class="col-group-corte" style="background-color: rgba(239, 68, 68, 0.03);">Próx. Corte</th>
+                <th class="col-group-corte" style="background-color: rgba(239, 68, 68, 0.03);">RND Corte</th>
+                <th class="col-group-corte" style="background-color: rgba(239, 68, 68, 0.03);">Dur. Corte</th>
+                <th class="col-group-corte" style="background-color: rgba(239, 68, 68, 0.03);">Fin Corte</th>
 
                 <!-- Juez de Refuerzo -->
-                <th style="background-color: rgba(245, 158, 11, 0.03);">Lleg. Ref.</th>
-                <th style="background-color: rgba(245, 158, 11, 0.03);">RND Turno</th>
-                <th style="background-color: rgba(245, 158, 11, 0.03);">Dur. Turno</th>
-                <th style="background-color: rgba(245, 158, 11, 0.03);">Fin Turno</th>
+                <th class="col-group-ref-llegada" style="background-color: rgba(245, 158, 11, 0.03);">Lleg. Ref.</th>
+                <th class="col-group-ref-llegada" style="background-color: rgba(245, 158, 11, 0.03);">RND Turno</th>
+                <th class="col-group-ref-llegada" style="background-color: rgba(245, 158, 11, 0.03);">Dur. Turno</th>
+                <th class="col-group-ref-llegada" style="background-color: rgba(245, 158, 11, 0.03);">Fin Turno</th>
 
                 <!-- Estados Jueces -->
-                <th style="background-color: rgba(59, 130, 246, 0.03);">Estado Jul</th>
-                <th style="background-color: rgba(59, 130, 246, 0.03);">Comp Jul</th>
-                <th style="background-color: rgba(59, 130, 246, 0.03);">Cat Jul</th>
-                <th style="background-color: rgba(59, 130, 246, 0.03);">Estado Enz</th>
-                <th style="background-color: rgba(59, 130, 246, 0.03);">Comp Enz</th>
-                <th style="background-color: rgba(59, 130, 246, 0.03);">Cat Enz</th>
-                <th style="background-color: rgba(59, 130, 246, 0.03);">Estado Ref</th>
-                <th style="background-color: rgba(59, 130, 246, 0.03);">Comp Ref</th>
-                <th style="background-color: rgba(59, 130, 246, 0.03);">Cat Ref</th>
+                <th class="col-group-jueces-est" style="background-color: rgba(59, 130, 246, 0.03);">Estado Jul</th>
+                <th class="col-group-jueces-est" style="background-color: rgba(59, 130, 246, 0.03);">Comp Jul</th>
+                <th class="col-group-jueces-est" style="background-color: rgba(59, 130, 246, 0.03);">Cat Jul</th>
+                <th class="col-group-jueces-est" style="background-color: rgba(59, 130, 246, 0.03);">Estado Enz</th>
+                <th class="col-group-jueces-est" style="background-color: rgba(59, 130, 246, 0.03);">Comp Enz</th>
+                <th class="col-group-jueces-est" style="background-color: rgba(59, 130, 246, 0.03);">Cat Enz</th>
+                <th class="col-group-jueces-est" style="background-color: rgba(59, 130, 246, 0.03);">Estado Ref</th>
+                <th class="col-group-jueces-est" style="background-color: rgba(59, 130, 246, 0.03);">Comp Ref</th>
+                <th class="col-group-jueces-est" style="background-color: rgba(59, 130, 246, 0.03);">Cat Ref</th>
 
                 <!-- Cola -->
-                <th>Tam.</th>
-                <th>Detalle</th>
+                <th class="col-group-cola">Tam.</th>
+                <th class="col-group-cola">Detalle</th>
 
                 <!-- Competidores en Sistema (15 slots) -->
-                <th style="background-color: rgba(16, 185, 129, 0.03);">Est. 1</th><th style="background-color: rgba(16, 185, 129, 0.03);">Lleg. 1</th>
-                <th style="background-color: rgba(16, 185, 129, 0.03);">Est. 2</th><th style="background-color: rgba(16, 185, 129, 0.03);">Lleg. 2</th>
-                <th style="background-color: rgba(16, 185, 129, 0.03);">Est. 3</th><th style="background-color: rgba(16, 185, 129, 0.03);">Lleg. 3</th>
-                <th style="background-color: rgba(16, 185, 129, 0.03);">Est. 4</th><th style="background-color: rgba(16, 185, 129, 0.03);">Lleg. 4</th>
-                <th style="background-color: rgba(16, 185, 129, 0.03);">Est. 5</th><th style="background-color: rgba(16, 185, 129, 0.03);">Lleg. 5</th>
-                <th style="background-color: rgba(16, 185, 129, 0.03);">Est. 6</th><th style="background-color: rgba(16, 185, 129, 0.03);">Lleg. 6</th>
-                <th style="background-color: rgba(16, 185, 129, 0.03);">Est. 7</th><th style="background-color: rgba(16, 185, 129, 0.03);">Lleg. 7</th>
-                <th style="background-color: rgba(16, 185, 129, 0.03);">Est. 8</th><th style="background-color: rgba(16, 185, 129, 0.03);">Lleg. 8</th>
-                <th style="background-color: rgba(16, 185, 129, 0.03);">Est. 9</th><th style="background-color: rgba(16, 185, 129, 0.03);">Lleg. 9</th>
-                <th style="background-color: rgba(16, 185, 129, 0.03);">Est. 10</th><th style="background-color: rgba(16, 185, 129, 0.03);">Lleg. 10</th>
-                <th style="background-color: rgba(16, 185, 129, 0.03);">Est. 11</th><th style="background-color: rgba(16, 185, 129, 0.03);">Lleg. 11</th>
-                <th style="background-color: rgba(16, 185, 129, 0.03);">Est. 12</th><th style="background-color: rgba(16, 185, 129, 0.03);">Lleg. 12</th>
-                <th style="background-color: rgba(16, 185, 129, 0.03);">Est. 13</th><th style="background-color: rgba(16, 185, 129, 0.03);">Lleg. 13</th>
-                <th style="background-color: rgba(16, 185, 129, 0.03);">Est. 14</th><th style="background-color: rgba(16, 185, 129, 0.03);">Lleg. 14</th>
-                <th style="background-color: rgba(16, 185, 129, 0.03);">Est. 15</th><th style="background-color: rgba(16, 185, 129, 0.03);">Lleg. 15</th>
+                <th class="col-group-slots" style="background-color: rgba(16, 185, 129, 0.03);">Est. 1</th><th class="col-group-slots" style="background-color: rgba(16, 185, 129, 0.03);">Lleg. 1</th>
+                <th class="col-group-slots" style="background-color: rgba(16, 185, 129, 0.03);">Est. 2</th><th class="col-group-slots" style="background-color: rgba(16, 185, 129, 0.03);">Lleg. 2</th>
+                <th class="col-group-slots" style="background-color: rgba(16, 185, 129, 0.03);">Est. 3</th><th class="col-group-slots" style="background-color: rgba(16, 185, 129, 0.03);">Lleg. 3</th>
+                <th class="col-group-slots" style="background-color: rgba(16, 185, 129, 0.03);">Est. 4</th><th class="col-group-slots" style="background-color: rgba(16, 185, 129, 0.03);">Lleg. 4</th>
+                <th class="col-group-slots" style="background-color: rgba(16, 185, 129, 0.03);">Est. 5</th><th class="col-group-slots" style="background-color: rgba(16, 185, 129, 0.03);">Lleg. 5</th>
+                <th class="col-group-slots" style="background-color: rgba(16, 185, 129, 0.03);">Est. 6</th><th class="col-group-slots" style="background-color: rgba(16, 185, 129, 0.03);">Lleg. 6</th>
+                <th class="col-group-slots" style="background-color: rgba(16, 185, 129, 0.03);">Est. 7</th><th class="col-group-slots" style="background-color: rgba(16, 185, 129, 0.03);">Lleg. 7</th>
+                <th class="col-group-slots" style="background-color: rgba(16, 185, 129, 0.03);">Est. 8</th><th class="col-group-slots" style="background-color: rgba(16, 185, 129, 0.03);">Lleg. 8</th>
+                <th class="col-group-slots" style="background-color: rgba(16, 185, 129, 0.03);">Est. 9</th><th class="col-group-slots" style="background-color: rgba(16, 185, 129, 0.03);">Lleg. 9</th>
+                <th class="col-group-slots" style="background-color: rgba(16, 185, 129, 0.03);">Est. 10</th><th class="col-group-slots" style="background-color: rgba(16, 185, 129, 0.03);">Lleg. 10</th>
+                <th class="col-group-slots" style="background-color: rgba(16, 185, 129, 0.03);">Est. 11</th><th class="col-group-slots" style="background-color: rgba(16, 185, 129, 0.03);">Lleg. 11</th>
+                <th class="col-group-slots" style="background-color: rgba(16, 185, 129, 0.03);">Est. 12</th><th class="col-group-slots" style="background-color: rgba(16, 185, 129, 0.03);">Lleg. 12</th>
+                <th class="col-group-slots" style="background-color: rgba(16, 185, 129, 0.03);">Est. 13</th><th class="col-group-slots" style="background-color: rgba(16, 185, 129, 0.03);">Lleg. 13</th>
+                <th class="col-group-slots" style="background-color: rgba(16, 185, 129, 0.03);">Est. 14</th><th class="col-group-slots" style="background-color: rgba(16, 185, 129, 0.03);">Lleg. 14</th>
+                <th class="col-group-slots" style="background-color: rgba(16, 185, 129, 0.03);">Est. 15</th><th class="col-group-slots" style="background-color: rgba(16, 185, 129, 0.03);">Lleg. 15</th>
 
                 <!-- Acumuladores y Contadores -->
-                <th style="background-color: rgba(139, 92, 246, 0.03);">Ac. Cola Ini</th>
-                <th style="background-color: rgba(139, 92, 246, 0.03);">C. Cola Ini</th>
-                <th style="background-color: rgba(139, 92, 246, 0.03);">Ac. Cola Av</th>
-                <th style="background-color: rgba(139, 92, 246, 0.03);">C. Cola Av</th>
-                <th style="background-color: rgba(139, 92, 246, 0.03);">Max Espera</th>
-                <th style="background-color: rgba(139, 92, 246, 0.03);">Ac. Oc. Jul</th>
-                <th style="background-color: rgba(139, 92, 246, 0.03);">Ac. Oc. Enzo</th>
-                <th style="background-color: rgba(139, 92, 246, 0.03);">Ac. Oc. Ref</th>
-                <th style="background-color: rgba(139, 92, 246, 0.03);">C. At. Jul</th>
-                <th style="background-color: rgba(139, 92, 246, 0.03);">C. At. Enzo</th>
-                <th style="background-color: rgba(139, 92, 246, 0.03);">C. At. Ref</th>
+                <th class="col-group-acum" style="background-color: rgba(139, 92, 246, 0.03);">Ac. Cola Ini</th>
+                <th class="col-group-acum" style="background-color: rgba(139, 92, 246, 0.03);">C. Cola Ini</th>
+                <th class="col-group-acum" style="background-color: rgba(139, 92, 246, 0.03);">Ac. Cola Av</th>
+                <th class="col-group-acum" style="background-color: rgba(139, 92, 246, 0.03);">C. Cola Av</th>
+                <th class="col-group-acum" style="background-color: rgba(139, 92, 246, 0.03);">Max Espera</th>
+                <th class="col-group-acum" style="background-color: rgba(139, 92, 246, 0.03);">Ac. Oc. Jul</th>
+                <th class="col-group-acum" style="background-color: rgba(139, 92, 246, 0.03);">Ac. Oc. Enzo</th>
+                <th class="col-group-acum" style="background-color: rgba(139, 92, 246, 0.03);">Ac. Oc. Ref</th>
+                <th class="col-group-acum" style="background-color: rgba(139, 92, 246, 0.03);">C. At. Jul</th>
+                <th class="col-group-acum" style="background-color: rgba(139, 92, 246, 0.03);">C. At. Enzo</th>
+                <th class="col-group-acum" style="background-color: rgba(139, 92, 246, 0.03);">C. At. Ref</th>
               </tr>
             </thead>
             <tbody id="body-vector-estado">
               <tr>
-                <td colspan="83" class="empty-state">
+                <td colspan="86" class="empty-state">
                   <i>📊</i>
                   <p>Presiona "Ejecutar Simulación" para calcular y desplegar el vector de estado.</p>
                 </td>

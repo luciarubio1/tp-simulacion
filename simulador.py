@@ -8,7 +8,7 @@ Contiene las clases del dominio y el motor principal de simulación por eventos.
 
 import random
 from runge_kutta import runge_kutta_4
-from generadores import generar_exponencial, generar_normal, generar_uniforme
+from generadores import generar_exponencial, generar_normal, generar_uniforme, inicializar_generadores
 
 class Competidor:
     _contador = 0
@@ -45,6 +45,7 @@ class Juez:
         self.tiempo_fin_atencion = None
         self.tiempo_ocupado_total = 0.0
         self.competidores_atendidos = 0
+        self.cached_t_at2 = None
         
         # Para el juez de refuerzo
         self.tiempo_llegada_refuerzo = None
@@ -60,6 +61,7 @@ def simular(params):
     """
     Simula el comportamiento del centro de evaluación por eventos discretos.
     """
+    inicializar_generadores()
     T_MAX       = float(params.get('tiempo_maximo', 480))
     MAX_ITER    = int(params.get('max_iteraciones', 100000))
     ITER_DESDE  = int(params.get('iter_desde', 1))
@@ -187,9 +189,9 @@ def simular(params):
         max_espera = max(max_espera, espera)
         
         if comp.categoria == 'Inicial':
-            t_aten, r1, r2 = generar_normal(MEDIA_INI, DESVIO_INI)
+            t_aten, r1, r2, t_at1, t_at2 = generar_normal(MEDIA_INI, DESVIO_INI, cache_owner=juez)
         else:
-            t_aten, r1, r2 = generar_normal(MEDIA_AVAN, DESVIO_AVAN)
+            t_aten, r1, r2, t_at1, t_at2 = generar_normal(MEDIA_AVAN, DESVIO_AVAN, cache_owner=juez)
         
         comp.tiempo_atencion  = t_aten
         comp.rnd_atencion_1   = r1
@@ -205,15 +207,18 @@ def simular(params):
             if juez.nombre == 'Julian':
                 detalles_dict['var_rnd_at1_julian'] = r1
                 detalles_dict['var_rnd_at2_julian'] = r2
-                detalles_dict['var_t_at_julian'] = t_aten
+                detalles_dict['var_t_at1_julian'] = t_at1
+                detalles_dict['var_t_at2_julian'] = t_at2
             elif juez.nombre == 'Enzo':
                 detalles_dict['var_rnd_at1_enzo'] = r1
                 detalles_dict['var_rnd_at2_enzo'] = r2
-                detalles_dict['var_t_at_enzo'] = t_aten
+                detalles_dict['var_t_at1_enzo'] = t_at1
+                detalles_dict['var_t_at2_enzo'] = t_at2
             elif juez.nombre == 'Refuerzo':
                 detalles_dict['var_rnd_at1_refuerzo'] = r1
                 detalles_dict['var_rnd_at2_refuerzo'] = r2
-                detalles_dict['var_t_at_refuerzo'] = t_aten
+                detalles_dict['var_t_at1_refuerzo'] = t_at1
+                detalles_dict['var_t_at2_refuerzo'] = t_at2
 
     # ─────────────────────────────────────────────────────────────────────────
     #  CONSTRUIR FILA DEL VECTOR DE ESTADO
@@ -278,9 +283,9 @@ def simular(params):
                     "juez_asignado": juez_obj.nombre,
                     "tiempo_en_cola": round(c.tiempo_en_cola, 4),
                     "rnd_categoria": round(c.rnd_categoria, 2),
-                    "rnd_atencion_1": round(c.rnd_atencion_1, 2) if c.rnd_atencion_1 else "-",
-                    "rnd_atencion_2": round(c.rnd_atencion_2, 2) if c.rnd_atencion_2 else "-",
-                    "tiempo_atencion": round(c.tiempo_atencion, 4) if c.tiempo_atencion else "-",
+                    "rnd_atencion_1": round(c.rnd_atencion_1, 2) if isinstance(c.rnd_atencion_1, (int, float)) else "-",
+                    "rnd_atencion_2": round(c.rnd_atencion_2, 2) if isinstance(c.rnd_atencion_2, (int, float)) else "-",
+                    "tiempo_atencion": round(c.tiempo_atencion, 4) if isinstance(c.tiempo_atencion, (int, float)) else "-",
                     "rnd_llegada": round(c.rnd_llegada, 2)
                 })
 
@@ -293,13 +298,16 @@ def simular(params):
         # Jueces por separado
         rnd_at1_julian = '-'
         rnd_at2_julian = '-'
-        t_at_julian = '-'
+        t_at1_julian = '-'
+        t_at2_julian = '-'
         rnd_at1_enzo = '-'
         rnd_at2_enzo = '-'
-        t_at_enzo = '-'
+        t_at1_enzo = '-'
+        t_at2_enzo = '-'
         rnd_at1_refuerzo = '-'
         rnd_at2_refuerzo = '-'
-        t_at_refuerzo = '-'
+        t_at1_refuerzo = '-'
+        t_at2_refuerzo = '-'
         
         rnd_corte_val = '-'
         t_corte_val = '-'
@@ -317,17 +325,20 @@ def simular(params):
             # Julián
             rnd_at1_julian = detalles_evento.get('var_rnd_at1_julian', '-')
             rnd_at2_julian = detalles_evento.get('var_rnd_at2_julian', '-')
-            t_at_julian = detalles_evento.get('var_t_at_julian', '-')
+            t_at1_julian = detalles_evento.get('var_t_at1_julian', '-')
+            t_at2_julian = detalles_evento.get('var_t_at2_julian', '-')
             
             # Enzo
             rnd_at1_enzo = detalles_evento.get('var_rnd_at1_enzo', '-')
             rnd_at2_enzo = detalles_evento.get('var_rnd_at2_enzo', '-')
-            t_at_enzo = detalles_evento.get('var_t_at_enzo', '-')
+            t_at1_enzo = detalles_evento.get('var_t_at1_enzo', '-')
+            t_at2_enzo = detalles_evento.get('var_t_at2_enzo', '-')
             
             # Refuerzo
             rnd_at1_refuerzo = detalles_evento.get('var_rnd_at1_refuerzo', '-')
             rnd_at2_refuerzo = detalles_evento.get('var_rnd_at2_refuerzo', '-')
-            t_at_refuerzo = detalles_evento.get('var_t_at_refuerzo', '-')
+            t_at1_refuerzo = detalles_evento.get('var_t_at1_refuerzo', '-')
+            t_at2_refuerzo = detalles_evento.get('var_t_at2_refuerzo', '-')
             
             rnd_corte_val = detalles_evento.get('var_rnd_corte', '-')
             t_corte_val = detalles_evento.get('var_t_corte', '-')
@@ -377,17 +388,20 @@ def simular(params):
             # Variables de Atención Julián
             "var_rnd_at1_julian": rnd_at1_julian,
             "var_rnd_at2_julian": rnd_at2_julian,
-            "var_t_at_julian":    format_float(t_at_julian, 4),
+            "var_t_at1_julian":   format_float(t_at1_julian, 4),
+            "var_t_at2_julian":   format_float(t_at2_julian, 4),
             
             # Variables de Atención Enzo
             "var_rnd_at1_enzo":   rnd_at1_enzo,
             "var_rnd_at2_enzo":   rnd_at2_enzo,
-            "var_t_at_enzo":      format_float(t_at_enzo, 4),
+            "var_t_at1_enzo":     format_float(t_at1_enzo, 4),
+            "var_t_at2_enzo":     format_float(t_at2_enzo, 4),
             
             # Variables de Atención Refuerzo
             "var_rnd_at1_refuerzo": rnd_at1_refuerzo,
             "var_rnd_at2_refuerzo": rnd_at2_refuerzo,
-            "var_t_at_refuerzo":  format_float(t_at_refuerzo, 4),
+            "var_t_at1_refuerzo":  format_float(t_at1_refuerzo, 4),
+            "var_t_at2_refuerzo":  format_float(t_at2_refuerzo, 4),
             
             # Variables de Corte e Integración RK4
             "var_rnd_corte":      rnd_corte_val,

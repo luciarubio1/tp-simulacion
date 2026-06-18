@@ -143,7 +143,7 @@ function renderizarVectorEstado() {
   if (stateVectorData.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="83" class="empty-state">
+        <td colspan="86" class="empty-state">
           <i>📊</i>
           <p>No se encontraron resultados en el rango de iteraciones seleccionado.</p>
         </td>
@@ -209,15 +209,15 @@ function renderizarVectorEstado() {
     if (fila.slots && fila.slots.length > 0) {
       fila.slots.forEach(s => {
         slotsHtml += `
-          <td style="background-color: rgba(16, 185, 129, 0.01); text-align: center;">${formatSlotEst(s.estado)}</td>
-          <td class="code-val" style="background-color: rgba(16, 185, 129, 0.01); text-align: center; font-size: 0.8rem;">${s.hora_llegada}</td>
+          <td class="col-group-slots" style="background-color: rgba(16, 185, 129, 0.01); text-align: center;">${formatSlotEst(s.estado)}</td>
+          <td class="code-val col-group-slots" style="background-color: rgba(16, 185, 129, 0.01); text-align: center; font-size: 0.8rem;">${s.hora_llegada}</td>
         `;
       });
     } else {
       for (let i = 0; i < 15; i++) {
         slotsHtml += `
-          <td style="background-color: rgba(16, 185, 129, 0.01); text-align: center; color: var(--text-muted);">-</td>
-          <td class="code-val" style="background-color: rgba(16, 185, 129, 0.01); text-align: center; color: var(--text-muted); font-size: 0.8rem;">-</td>
+          <td class="col-group-slots" style="background-color: rgba(16, 185, 129, 0.01); text-align: center; color: var(--text-muted);">-</td>
+          <td class="code-val col-group-slots" style="background-color: rgba(16, 185, 129, 0.01); text-align: center; color: var(--text-muted); font-size: 0.8rem;">-</td>
         `;
       }
     }
@@ -228,76 +228,79 @@ function renderizarVectorEstado() {
       <td class="code-val">${fila.reloj}</td>
 
       <!-- Llegada Competidor -->
-      <td class="code-val" style="background-color: rgba(6, 182, 212, 0.02); color: var(--accent-cyan); font-weight: 500;">${formatRnd(fila.var_rnd_llegada)}</td>
-      <td class="code-val" style="background-color: rgba(6, 182, 212, 0.02); color: var(--text-primary);">${formatVal(fila.var_t_llegada)}</td>
-      <td class="code-val" style="background-color: rgba(6, 182, 212, 0.02); color: var(--text-primary); font-weight: 500;">${fila.prox_llegada}</td>
+      <td class="code-val col-group-llegada" style="background-color: rgba(6, 182, 212, 0.02); color: var(--accent-cyan); font-weight: 500;">${formatRnd(fila.var_rnd_llegada)}</td>
+      <td class="code-val col-group-llegada" style="background-color: rgba(6, 182, 212, 0.02); color: var(--text-primary);">${formatVal(fila.var_t_llegada)}</td>
+      <td class="code-val col-group-llegada" style="background-color: rgba(6, 182, 212, 0.02); color: var(--text-primary); font-weight: 500;">${fila.prox_llegada}</td>
 
       <!-- Categorización -->
-      <td class="code-val" style="background-color: rgba(6, 182, 212, 0.02); color: var(--accent-cyan); font-weight: 500;">${formatRnd(fila.var_rnd_cat)}</td>
-      <td style="background-color: rgba(6, 182, 212, 0.02);">${badgeCat(fila.var_cat)}</td>
+      <td class="code-val col-group-cat" style="background-color: rgba(6, 182, 212, 0.02); color: var(--accent-cyan); font-weight: 500;">${formatRnd(fila.var_rnd_cat)}</td>
+      <td class="col-group-cat" style="background-color: rgba(6, 182, 212, 0.02);">${badgeCat(fila.var_cat)}</td>
 
       <!-- Fin Atención Julián -->
-      <td class="code-val" style="background-color: rgba(6, 182, 212, 0.02); color: var(--accent-cyan); font-weight: 500;">${formatRnd(fila.var_rnd_at1_julian)}</td>
-      <td class="code-val" style="background-color: rgba(6, 182, 212, 0.02); color: var(--accent-cyan); font-weight: 500;">${formatRnd(fila.var_rnd_at2_julian)}</td>
-      <td class="code-val" style="background-color: rgba(6, 182, 212, 0.02); color: var(--text-primary);">${formatVal(fila.var_t_at_julian)}</td>
-      <td class="code-val" style="background-color: rgba(6, 182, 212, 0.02); color: var(--text-primary); font-weight: 500;">${fila.fin_aten_julian}</td>
+      <td class="code-val col-group-julian" style="background-color: rgba(6, 182, 212, 0.02); color: var(--accent-cyan); font-weight: 500;">${formatRnd(fila.var_rnd_at1_julian)}</td>
+      <td class="code-val col-group-julian" style="background-color: rgba(6, 182, 212, 0.02); color: var(--accent-cyan); font-weight: 500;">${formatRnd(fila.var_rnd_at2_julian)}</td>
+      <td class="code-val col-group-julian" style="background-color: rgba(6, 182, 212, 0.02); color: var(--text-primary);">${formatVal(fila.var_t_at1_julian)}</td>
+      <td class="code-val col-group-julian" style="background-color: rgba(6, 182, 212, 0.02); color: var(--text-primary);">${formatVal(fila.var_t_at2_julian)}</td>
+      <td class="code-val col-group-julian" style="background-color: rgba(6, 182, 212, 0.02); color: var(--text-primary); font-weight: 500;">${fila.fin_aten_julian}</td>
 
       <!-- Fin Atención Enzo -->
-      <td class="code-val" style="background-color: rgba(6, 182, 212, 0.02); color: var(--accent-cyan); font-weight: 500;">${formatRnd(fila.var_rnd_at1_enzo)}</td>
-      <td class="code-val" style="background-color: rgba(6, 182, 212, 0.02); color: var(--accent-cyan); font-weight: 500;">${formatRnd(fila.var_rnd_at2_enzo)}</td>
-      <td class="code-val" style="background-color: rgba(6, 182, 212, 0.02); color: var(--text-primary);">${formatVal(fila.var_t_at_enzo)}</td>
-      <td class="code-val" style="background-color: rgba(6, 182, 212, 0.02); color: var(--text-primary); font-weight: 500;">${fila.fin_aten_enzo}</td>
+      <td class="code-val col-group-enzo" style="background-color: rgba(6, 182, 212, 0.02); color: var(--accent-cyan); font-weight: 500;">${formatRnd(fila.var_rnd_at1_enzo)}</td>
+      <td class="code-val col-group-enzo" style="background-color: rgba(6, 182, 212, 0.02); color: var(--accent-cyan); font-weight: 500;">${formatRnd(fila.var_rnd_at2_enzo)}</td>
+      <td class="code-val col-group-enzo" style="background-color: rgba(6, 182, 212, 0.02); color: var(--text-primary);">${formatVal(fila.var_t_at1_enzo)}</td>
+      <td class="code-val col-group-enzo" style="background-color: rgba(6, 182, 212, 0.02); color: var(--text-primary);">${formatVal(fila.var_t_at2_enzo)}</td>
+      <td class="code-val col-group-enzo" style="background-color: rgba(6, 182, 212, 0.02); color: var(--text-primary); font-weight: 500;">${fila.fin_aten_enzo}</td>
 
       <!-- Fin Atención Refuerzo -->
-      <td class="code-val" style="background-color: rgba(6, 182, 212, 0.02); color: var(--accent-cyan); font-weight: 500;">${formatRnd(fila.var_rnd_at1_refuerzo)}</td>
-      <td class="code-val" style="background-color: rgba(6, 182, 212, 0.02); color: var(--accent-cyan); font-weight: 500;">${formatRnd(fila.var_rnd_at2_refuerzo)}</td>
-      <td class="code-val" style="background-color: rgba(6, 182, 212, 0.02); color: var(--text-primary);">${formatVal(fila.var_t_at_refuerzo)}</td>
-      <td class="code-val" style="background-color: rgba(6, 182, 212, 0.02); color: var(--text-primary); font-weight: 500;">${fila.fin_aten_refuerzo}</td>
+      <td class="code-val col-group-refuerzo" style="background-color: rgba(6, 182, 212, 0.02); color: var(--accent-cyan); font-weight: 500;">${formatRnd(fila.var_rnd_at1_refuerzo)}</td>
+      <td class="code-val col-group-refuerzo" style="background-color: rgba(6, 182, 212, 0.02); color: var(--accent-cyan); font-weight: 500;">${formatRnd(fila.var_rnd_at2_refuerzo)}</td>
+      <td class="code-val col-group-refuerzo" style="background-color: rgba(6, 182, 212, 0.02); color: var(--text-primary);">${formatVal(fila.var_t_at1_refuerzo)}</td>
+      <td class="code-val col-group-refuerzo" style="background-color: rgba(6, 182, 212, 0.02); color: var(--text-primary);">${formatVal(fila.var_t_at2_refuerzo)}</td>
+      <td class="code-val col-group-refuerzo" style="background-color: rgba(6, 182, 212, 0.02); color: var(--text-primary); font-weight: 500;">${fila.fin_aten_refuerzo}</td>
 
       <!-- Inconveniente Eléctrico -->
-      <td class="code-val" style="background-color: rgba(239, 68, 68, 0.02); color: var(--text-secondary);">${fila.rk_e0}</td>
-      <td class="code-val" style="background-color: rgba(239, 68, 68, 0.02); color: var(--text-secondary);">${fila.rk_t_final}</td>
-      <td class="code-val" style="background-color: rgba(239, 68, 68, 0.02); color: var(--text-primary); font-weight: 500;">${fila.prox_corte}</td>
-      <td class="code-val" style="background-color: rgba(239, 68, 68, 0.02); color: var(--accent-cyan); font-weight: 500;">${formatRnd(fila.var_rnd_corte)}</td>
-      <td class="code-val" style="background-color: rgba(239, 68, 68, 0.02); color: var(--text-primary);">${formatVal(fila.var_t_corte)}</td>
-      <td class="code-val" style="background-color: rgba(239, 68, 68, 0.02); color: var(--text-primary); font-weight: 500;">${fila.fin_corte}</td>
+      <td class="code-val col-group-corte" style="background-color: rgba(239, 68, 68, 0.02); color: var(--text-secondary);">${fila.rk_e0}</td>
+      <td class="code-val col-group-corte" style="background-color: rgba(239, 68, 68, 0.02); color: var(--text-secondary);">${fila.rk_t_final}</td>
+      <td class="code-val col-group-corte" style="background-color: rgba(239, 68, 68, 0.02); color: var(--text-primary); font-weight: 500;">${fila.prox_corte}</td>
+      <td class="code-val col-group-corte" style="background-color: rgba(239, 68, 68, 0.02); color: var(--accent-cyan); font-weight: 500;">${formatRnd(fila.var_rnd_corte)}</td>
+      <td class="code-val col-group-corte" style="background-color: rgba(239, 68, 68, 0.02); color: var(--text-primary);">${formatVal(fila.var_t_corte)}</td>
+      <td class="code-val col-group-corte" style="background-color: rgba(239, 68, 68, 0.02); color: var(--text-primary); font-weight: 500;">${fila.fin_corte}</td>
 
       <!-- Juez de Refuerzo (Turno) -->
-      <td class="code-val" style="background-color: rgba(245, 158, 11, 0.02); color: var(--text-primary); font-weight: 500;">${fila.llegada_refuerzo}</td>
-      <td class="code-val" style="background-color: rgba(245, 158, 11, 0.02); color: var(--accent-cyan); font-weight: 500;">${formatRnd(fila.var_rnd_turno)}</td>
-      <td class="code-val" style="background-color: rgba(245, 158, 11, 0.02); color: var(--text-primary);">${formatVal(fila.var_t_turno)}</td>
-      <td class="code-val" style="background-color: rgba(245, 158, 11, 0.02); color: var(--text-primary); font-weight: 500;">${fila.fin_turno_refuerzo}</td>
+      <td class="code-val col-group-ref-llegada" style="background-color: rgba(245, 158, 11, 0.02); color: var(--text-primary); font-weight: 500;">${fila.llegada_refuerzo}</td>
+      <td class="code-val col-group-ref-llegada" style="background-color: rgba(245, 158, 11, 0.02); color: var(--accent-cyan); font-weight: 500;">${formatRnd(fila.var_rnd_turno)}</td>
+      <td class="code-val col-group-ref-llegada" style="background-color: rgba(245, 158, 11, 0.02); color: var(--text-primary);">${formatVal(fila.var_t_turno)}</td>
+      <td class="code-val col-group-ref-llegada" style="background-color: rgba(245, 158, 11, 0.02); color: var(--text-primary); font-weight: 500;">${fila.fin_turno_refuerzo}</td>
 
       <!-- Estados Jueces -->
-      <td style="background-color: rgba(59, 130, 246, 0.02);">${badgeJuez(fila.julian_estado)}</td>
-      <td class="code-val" style="background-color: rgba(59, 130, 246, 0.02);">${fila.julian_comp_id}</td>
-      <td style="background-color: rgba(59, 130, 246, 0.02);">${badgeCat(fila.julian_comp_cat)}</td>
-      <td style="background-color: rgba(59, 130, 246, 0.02);">${badgeJuez(fila.enzo_estado)}</td>
-      <td class="code-val" style="background-color: rgba(59, 130, 246, 0.02);">${fila.enzo_comp_id}</td>
-      <td style="background-color: rgba(59, 130, 246, 0.02);">${badgeCat(fila.enzo_comp_cat)}</td>
-      <td style="background-color: rgba(59, 130, 246, 0.02);">${badgeJuez(fila.ref_estado)}</td>
-      <td class="code-val" style="background-color: rgba(59, 130, 246, 0.02);">${fila.ref_comp_id}</td>
-      <td style="background-color: rgba(59, 130, 246, 0.02);">${badgeCat(fila.ref_comp_cat)}</td>
+      <td class="col-group-jueces-est" style="background-color: rgba(59, 130, 246, 0.02);">${badgeJuez(fila.julian_estado)}</td>
+      <td class="code-val col-group-jueces-est" style="background-color: rgba(59, 130, 246, 0.02);">${fila.julian_comp_id}</td>
+      <td class="col-group-jueces-est" style="background-color: rgba(59, 130, 246, 0.02);">${badgeCat(fila.julian_comp_cat)}</td>
+      <td class="col-group-jueces-est" style="background-color: rgba(59, 130, 246, 0.02);">${badgeJuez(fila.enzo_estado)}</td>
+      <td class="code-val col-group-jueces-est" style="background-color: rgba(59, 130, 246, 0.02);">${fila.enzo_comp_id}</td>
+      <td class="col-group-jueces-est" style="background-color: rgba(59, 130, 246, 0.02);">${badgeCat(fila.enzo_comp_cat)}</td>
+      <td class="col-group-jueces-est" style="background-color: rgba(59, 130, 246, 0.02);">${badgeJuez(fila.ref_estado)}</td>
+      <td class="code-val col-group-jueces-est" style="background-color: rgba(59, 130, 246, 0.02);">${fila.ref_comp_id}</td>
+      <td class="col-group-jueces-est" style="background-color: rgba(59, 130, 246, 0.02);">${badgeCat(fila.ref_comp_cat)}</td>
 
       <!-- Cola -->
-      <td style="font-weight: 700; color: ${fila.cola_tamanio >= 5 ? 'var(--accent-rose)' : 'var(--text-primary)'};">${fila.cola_tamanio}</td>
-      <td style="font-size: 0.75rem; font-family: var(--font-family-mono); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${fila.cola_detalle}">${fila.cola_detalle}</td>
+      <td class="col-group-cola" style="font-weight: 700; color: ${fila.cola_tamanio >= 5 ? 'var(--accent-rose)' : 'var(--text-primary)'};">${fila.cola_tamanio}</td>
+      <td class="col-group-cola" style="font-size: 0.75rem; font-family: var(--font-family-mono); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${fila.cola_detalle}">${fila.cola_detalle}</td>
 
       <!-- Slots Estáticos -->
       ${slotsHtml}
 
       <!-- Acumuladores y Contadores -->
-      <td class="code-val" style="background-color: rgba(139, 92, 246, 0.02);">${formatVal(fila.acum_espera_ini)}</td>
-      <td class="code-val" style="background-color: rgba(139, 92, 246, 0.02); font-weight: 500;">${fila.cont_espera_ini}</td>
-      <td class="code-val" style="background-color: rgba(139, 92, 246, 0.02);">${formatVal(fila.acum_espera_avan)}</td>
-      <td class="code-val" style="background-color: rgba(139, 92, 246, 0.02); font-weight: 500;">${fila.cont_espera_avan}</td>
-      <td class="code-val" style="background-color: rgba(139, 92, 246, 0.02); color: var(--accent-rose); font-weight: 600;">${formatVal(fila.max_espera)}</td>
-      <td class="code-val" style="background-color: rgba(139, 92, 246, 0.02);">${formatVal(fila.acum_ocupacion_julian)}</td>
-      <td class="code-val" style="background-color: rgba(139, 92, 246, 0.02);">${formatVal(fila.acum_ocupacion_enzo)}</td>
-      <td class="code-val" style="background-color: rgba(139, 92, 246, 0.02);">${formatVal(fila.acum_ocupacion_refuerzo)}</td>
-      <td class="code-val" style="background-color: rgba(139, 92, 246, 0.02);">${fila.cont_atendidos_julian}</td>
-      <td class="code-val" style="background-color: rgba(139, 92, 246, 0.02);">${fila.cont_atendidos_enzo}</td>
-      <td class="code-val" style="background-color: rgba(139, 92, 246, 0.02);">${fila.cont_atendidos_refuerzo}</td>
+      <td class="code-val col-group-acum" style="background-color: rgba(139, 92, 246, 0.02);">${formatVal(fila.acum_espera_ini)}</td>
+      <td class="code-val col-group-acum" style="background-color: rgba(139, 92, 246, 0.02); font-weight: 500;">${fila.cont_espera_ini}</td>
+      <td class="code-val col-group-acum" style="background-color: rgba(139, 92, 246, 0.02);">${formatVal(fila.acum_espera_avan)}</td>
+      <td class="code-val col-group-acum" style="background-color: rgba(139, 92, 246, 0.02); font-weight: 500;">${fila.cont_espera_avan}</td>
+      <td class="code-val col-group-acum" style="background-color: rgba(139, 92, 246, 0.02); color: var(--accent-rose); font-weight: 600;">${formatVal(fila.max_espera)}</td>
+      <td class="code-val col-group-acum" style="background-color: rgba(139, 92, 246, 0.02);">${formatVal(fila.acum_ocupacion_julian)}</td>
+      <td class="code-val col-group-acum" style="background-color: rgba(139, 92, 246, 0.02);">${formatVal(fila.acum_ocupacion_enzo)}</td>
+      <td class="code-val col-group-acum" style="background-color: rgba(139, 92, 246, 0.02);">${formatVal(fila.acum_ocupacion_refuerzo)}</td>
+      <td class="code-val col-group-acum" style="background-color: rgba(139, 92, 246, 0.02);">${fila.cont_atendidos_julian}</td>
+      <td class="code-val col-group-acum" style="background-color: rgba(139, 92, 246, 0.02);">${fila.cont_atendidos_enzo}</td>
+      <td class="code-val col-group-acum" style="background-color: rgba(139, 92, 246, 0.02);">${fila.cont_atendidos_refuerzo}</td>
 
       <td style="font-weight: 600; color: ${fila.en_corte === 'Sí' ? 'var(--accent-amber)' : 'var(--text-muted)'};">${fila.en_corte}</td>
     `;
@@ -474,4 +477,82 @@ function mostrarToast(mensaje, esError = false) {
       setTimeout(() => toast.remove(), 500);
     }
   }, 4000);
+}
+
+// Alternar visibilidad de grupos de columnas
+function toggleColumnGroup(groupKey, buttonEl) {
+  const table = document.getElementById('table-vector-estado');
+  const classToToggle = 'hide-col-' + groupKey;
+  
+  if (table.classList.contains(classToToggle)) {
+    table.classList.remove(classToToggle);
+    buttonEl.classList.add('active');
+  } else {
+    table.classList.add(classToToggle);
+    buttonEl.classList.remove('active');
+  }
+}
+
+// Alternar el ancho de pantalla del layout (Expandir Tabla)
+function toggleLayoutWidth() {
+  const layout = document.querySelector('.main-layout');
+  const btn = document.getElementById('btn-toggle-layout');
+  const span = btn.querySelector('span');
+  
+  if (layout.classList.contains('layout-expanded')) {
+    layout.classList.remove('layout-expanded');
+    span.innerText = 'Expandir Tabla';
+    btn.style.borderColor = 'var(--border-color)';
+    btn.style.color = 'var(--text-secondary)';
+  } else {
+    layout.classList.add('layout-expanded');
+    span.innerText = 'Mostrar Configuración';
+    btn.style.borderColor = 'var(--accent-cyan)';
+    btn.style.color = 'var(--accent-cyan)';
+  }
+}
+
+// Habilitar arrastre horizontal con el mouse (Drag-to-Scroll)
+function inicializarArrastreTabla() {
+  const container = document.querySelector('.table-container');
+  if (!container) return;
+  
+  let isDown = false;
+  let startX;
+  let scrollLeft;
+
+  container.addEventListener('mousedown', (e) => {
+    // No arrastrar si se hace clic en botones, campos de entrada, etc.
+    if (e.target.tagName === 'BUTTON' || e.target.closest('button') || e.target.tagName === 'INPUT') return;
+    
+    isDown = true;
+    container.classList.add('dragging-table');
+    startX = e.pageX - container.offsetLeft;
+    scrollLeft = container.scrollLeft;
+  });
+
+  container.addEventListener('mouseleave', () => {
+    isDown = false;
+    container.classList.remove('dragging-table');
+  });
+
+  container.addEventListener('mouseup', () => {
+    isDown = false;
+    container.classList.remove('dragging-table');
+  });
+
+  container.addEventListener('mousemove', (e) => {
+    if (!isDown) return;
+    e.preventDefault();
+    const x = e.pageX - container.offsetLeft;
+    const walk = (x - startX) * 1.5; // Multiplicador de velocidad de arrastre
+    container.scrollLeft = scrollLeft - walk;
+  });
+}
+
+// Inicializar el arrastre al cargar
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  inicializarArrastreTabla();
+} else {
+  document.addEventListener('DOMContentLoaded', inicializarArrastreTabla);
 }
