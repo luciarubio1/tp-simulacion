@@ -143,7 +143,7 @@ function renderizarVectorEstado() {
   if (stateVectorData.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="86" class="empty-state">
+        <td colspan="90" class="empty-state">
           <i>📊</i>
           <p>No se encontraron resultados en el rango de iteraciones seleccionado.</p>
         </td>
@@ -242,6 +242,12 @@ function renderizarVectorEstado() {
       <td class="code-val col-group-julian" style="background-color: rgba(6, 182, 212, 0.02); color: var(--text-primary);">${formatVal(fila.var_t_at1_julian)}</td>
       <td class="code-val col-group-julian" style="background-color: rgba(6, 182, 212, 0.02); color: var(--text-primary);">${formatVal(fila.var_t_at2_julian)}</td>
       <td class="code-val col-group-julian" style="background-color: rgba(6, 182, 212, 0.02); color: var(--text-primary); font-weight: 500;">${fila.fin_aten_julian}</td>
+
+      <!-- Fin Atención Julián - Avanzados (Box-Muller extra) -->
+      <td class="code-val col-group-julian" style="background-color: rgba(99, 102, 241, 0.04); color: var(--accent-cyan); font-weight: 500;">${formatRnd(fila.var_rnd_at1_julian_avan)}</td>
+      <td class="code-val col-group-julian" style="background-color: rgba(99, 102, 241, 0.04); color: var(--accent-cyan); font-weight: 500;">${formatRnd(fila.var_rnd_at2_julian_avan)}</td>
+      <td class="code-val col-group-julian" style="background-color: rgba(99, 102, 241, 0.04); color: var(--text-primary);">${formatVal(fila.var_t_at1_julian_avan)}</td>
+      <td class="code-val col-group-julian" style="background-color: rgba(99, 102, 241, 0.04); color: var(--text-primary);">${formatVal(fila.var_t_at2_julian_avan)}</td>
 
       <!-- Fin Atención Enzo -->
       <td class="code-val col-group-enzo" style="background-color: rgba(6, 182, 212, 0.02); color: var(--accent-cyan); font-weight: 500;">${formatRnd(fila.var_rnd_at1_enzo)}</td>
@@ -599,11 +605,17 @@ function mapStateVectorToExcel(data) {
       "Categoría": fila.var_cat,
       
       // Fin Atención Julián
-      "RND At1 (Julián)": excelVal(fila.var_rnd_at1_julian),
-      "RND At2 (Julián)": excelVal(fila.var_rnd_at2_julian),
-      "T. At1 (Julián)": excelVal(fila.var_t_at1_julian),
-      "T. At2 (Julián)": excelVal(fila.var_t_at2_julian),
+      "RND At1 (Julián Ini)": excelVal(fila.var_rnd_at1_julian),
+      "RND At2 (Julián Ini)": excelVal(fila.var_rnd_at2_julian),
+      "T. At1 (Julián Ini)": excelVal(fila.var_t_at1_julian),
+      "T. At2 (Julián Ini)": excelVal(fila.var_t_at2_julian),
       "Próx. Fin (Julián)": excelVal(fila.fin_aten_julian),
+      
+      // Fin Atención Julián - Avanzados
+      "RND At1 (Julián Avan)": excelVal(fila.var_rnd_at1_julian_avan),
+      "RND At2 (Julián Avan)": excelVal(fila.var_rnd_at2_julian_avan),
+      "T. At1 (Julián Avan)": excelVal(fila.var_t_at1_julian_avan),
+      "T. At2 (Julián Avan)": excelVal(fila.var_t_at2_julian_avan),
       
       // Fin Atención Enzo
       "RND At1 (Enzo)": excelVal(fila.var_rnd_at1_enzo),

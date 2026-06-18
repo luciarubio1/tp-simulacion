@@ -45,7 +45,8 @@ class Juez:
         self.tiempo_fin_atencion = None
         self.tiempo_ocupado_total = 0.0
         self.competidores_atendidos = 0
-        self.cached_t_at2 = None
+        self.cached_t_ini = None   # Caché Box-Muller para competidores Iniciales
+        self.cached_t_avan = None  # Caché Box-Muller para competidores Avanzados (solo Julián)
         
         # Para el juez de refuerzo
         self.tiempo_llegada_refuerzo = None
@@ -189,9 +190,9 @@ def simular(params):
         max_espera = max(max_espera, espera)
         
         if comp.categoria == 'Inicial':
-            t_aten, r1, r2, t_at1, t_at2 = generar_normal(MEDIA_INI, DESVIO_INI, cache_owner=juez)
+            t_aten, r1, r2, t_at1, t_at2 = generar_normal(MEDIA_INI, DESVIO_INI, cache_owner=juez, categoria='Inicial')
         else:
-            t_aten, r1, r2, t_at1, t_at2 = generar_normal(MEDIA_AVAN, DESVIO_AVAN, cache_owner=juez)
+            t_aten, r1, r2, t_at1, t_at2 = generar_normal(MEDIA_AVAN, DESVIO_AVAN, cache_owner=juez, categoria='Avanzado')
         
         comp.tiempo_atencion  = t_aten
         comp.rnd_atencion_1   = r1
@@ -203,12 +204,18 @@ def simular(params):
         juez.tiempo_fin_atencion = comp.tiempo_fin_atencion
         
         if detalles_dict is not None:
-            # Separar variables según el juez asignado
+            # Separar variables según el juez asignado y la categoría del competidor
             if juez.nombre == 'Julian':
-                detalles_dict['var_rnd_at1_julian'] = r1
-                detalles_dict['var_rnd_at2_julian'] = r2
-                detalles_dict['var_t_at1_julian'] = t_at1
-                detalles_dict['var_t_at2_julian'] = t_at2
+                if comp.categoria == 'Inicial':
+                    detalles_dict['var_rnd_at1_julian'] = r1
+                    detalles_dict['var_rnd_at2_julian'] = r2
+                    detalles_dict['var_t_at1_julian'] = t_at1
+                    detalles_dict['var_t_at2_julian'] = t_at2
+                else:  # Avanzado
+                    detalles_dict['var_rnd_at1_julian_avan'] = r1
+                    detalles_dict['var_rnd_at2_julian_avan'] = r2
+                    detalles_dict['var_t_at1_julian_avan'] = t_at1
+                    detalles_dict['var_t_at2_julian_avan'] = t_at2
             elif juez.nombre == 'Enzo':
                 detalles_dict['var_rnd_at1_enzo'] = r1
                 detalles_dict['var_rnd_at2_enzo'] = r2
@@ -309,6 +316,12 @@ def simular(params):
         t_at1_refuerzo = '-'
         t_at2_refuerzo = '-'
         
+        # Julián - columnas extra para competidores Avanzados
+        rnd_at1_julian_avan = '-'
+        rnd_at2_julian_avan = '-'
+        t_at1_julian_avan = '-'
+        t_at2_julian_avan = '-'
+        
         rnd_corte_val = '-'
         t_corte_val = '-'
         rnd_turno_val = '-'
@@ -339,6 +352,12 @@ def simular(params):
             rnd_at2_refuerzo = detalles_evento.get('var_rnd_at2_refuerzo', '-')
             t_at1_refuerzo = detalles_evento.get('var_t_at1_refuerzo', '-')
             t_at2_refuerzo = detalles_evento.get('var_t_at2_refuerzo', '-')
+            
+            # Julián - Avanzados
+            rnd_at1_julian_avan = detalles_evento.get('var_rnd_at1_julian_avan', '-')
+            rnd_at2_julian_avan = detalles_evento.get('var_rnd_at2_julian_avan', '-')
+            t_at1_julian_avan = detalles_evento.get('var_t_at1_julian_avan', '-')
+            t_at2_julian_avan = detalles_evento.get('var_t_at2_julian_avan', '-')
             
             rnd_corte_val = detalles_evento.get('var_rnd_corte', '-')
             t_corte_val = detalles_evento.get('var_t_corte', '-')
@@ -390,6 +409,12 @@ def simular(params):
             "var_rnd_at2_julian": rnd_at2_julian,
             "var_t_at1_julian":   format_float(t_at1_julian, 4),
             "var_t_at2_julian":   format_float(t_at2_julian, 4),
+            
+            # Variables de Atención Julián - Avanzados (columnas extra)
+            "var_rnd_at1_julian_avan": rnd_at1_julian_avan,
+            "var_rnd_at2_julian_avan": rnd_at2_julian_avan,
+            "var_t_at1_julian_avan":   format_float(t_at1_julian_avan, 4),
+            "var_t_at2_julian_avan":   format_float(t_at2_julian_avan, 4),
             
             # Variables de Atención Enzo
             "var_rnd_at1_enzo":   rnd_at1_enzo,
