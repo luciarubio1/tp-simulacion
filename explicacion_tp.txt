@@ -1,41 +1,41 @@
 =============================================================================
 GUIA DE ESTUDIO Y EXPLICACION DEL TRABAJO PRACTICO 5 - SIMULACION
 UTN FRC - Ingenieria en Sistemas de Informacion - Ciclo lectivo 2026
-TP5 - Grupo 18
+TP5 - Grupo 18 - Coloquio de Defensa
 =============================================================================
 
 Esta guia contiene la explicacion teorica y practica del enunciado de nuestro trabajo
-practico de simulacion y del codigo desarrollado, para que todo el grupo este alineado
-al momento de defender el TP en el coloquio con los profesores.
+practico de simulacion y del codigo desarrollado, actualizada con todos los ultimos
+cambios e innovaciones tecnicas y de diseño implementadas para facilitar su defensa.
 
 -----------------------------------------------------------------------------
 1. EXPLICACION DEL ENUNCIADO (EL MODELO DEL SISTEMA)
 -----------------------------------------------------------------------------
 
 El sistema modela un Centro de Evaluacion de Competidores en unas olimpiadas de
-programacion. Se describe a traves de 3 elementos fundamentales:
+programacion. Se describe a traves de 5 elementos fundamentales:
 
 A. LOS OBJETOS (COMPETIDORES)
 Llegan al centro siguiendo una distribucion Exponencial Negativa (media por defecto
 de 5 minutos, configurable en el frontend).
 Al llegar, se determina aleatoriamente su categoria con una probabilidad fija:
-- Categoria Inicial (60%): Requiere revision basica. Puede ser atendido por cualquier
-  juez (Julian, Enzo o el de Refuerzo). Su tiempo de atencion es una distribucion NORMAL.
-- Categoria Avanzado (40%): Requiere evaluacion avanzada. SOLO Julian puede atenderlos.
-  Su tiempo de atencion es una distribucion NORMAL.
+- Categoria Inicial (60%): Puede ser atendido por cualquier juez (Julian, Enzo o 
+  el Juez de Refuerzo). Su tiempo de atencion es una distribucion NORMAL N(8, 2).
+- Categoria Avanzado (40%): SOLO Julian puede atenderlos. Su tiempo de atencion es 
+  una distribucion NORMAL N(12, 3).
 
 B. LOS SERVIDORES (JUECES)
 Disponemos de dos jueces fijos y uno temporal:
-- Julian (Fijo 1): Puede evaluar a competidores Iniciales y Avanzados.
+- Julian (Fijo 1): Puede evaluar a Iniciales y Avanzados (con sus respectivas medias).
 - Enzo (Fijo 2): Solo puede evaluar a competidores Iniciales.
 - Juez de Refuerzo (Temporal): Solo evalua Iniciales y funciona bajo reglas especiales:
   * Convocatoria: Se lo convoca cuando la cola de espera alcanza 5 o mas competidores.
   * Tiempo de arribo: Demora exactamente 10 minutos en llegar despues de ser convocado.
-  * Duracion del turno: Trabaja por un periodo Uniforme de entre 30 y 50 minutos.
+  * Duracion del turno: Trabaja por un periodo Uniforme U(30, 50) minutos.
   * Fin de turno o Renovacion: Al finalizar su turno basico:
     - Si la cola tiene 1 competidor o menos: Se retira (o espera a terminar el actual).
     - Si la cola tiene 2 o mas competidores: Renueva su turno por un periodo adicional
-      Uniforme de entre 10 y 18 minutos.
+      Uniforme U(10, 18) minutos.
 
 C. LA REGLA DE LA COLA (PRIORIDAD Y BLOQUEO DE COLA)
 Todos los competidores hacen una UNICA COLA comun por orden de llegada.
@@ -48,6 +48,7 @@ D. INCONVENIENTES ELECTRICOS (ECUACION DIFERENCIAL Y RUNGE-KUTTA 4)
 El centro sufre cortes de luz temporales.
 - Efecto del corte: Se suspenden todas las evaluaciones activas. Al terminar el corte,
   las evaluaciones se reanudan exactamente desde el punto donde se interrumpieron.
+  Los jueces pasan a estado 'Interrumpido' y luego vuelven a 'Ocupado'.
 - Duracion del corte: Sigue una distribucion Exponencial con media de 2 minutos.
 - Programacion del proximo corte (RK4):
   Se rige por la ecuacion diferencial: dE/dt = (t^2 - E) * h^2
@@ -55,8 +56,19 @@ El centro sufre cortes de luz temporales.
   * Para los siguientes cortes: Al terminar el corte anterior, se reinicia la integracion
     tomando como condicion inicial E(0) = Reloj actual de la simulacion.
   * Condicion de parada de RK4: Se integra hasta que E(t) supere por primera vez a E(0).
-    El valor de t final multiplicado por 8 es el tiempo en minutos reales hasta el
-    proximo corte de luz.
+    El valor de t final en minutos es la duracion de la luz encendida (tiempo hasta el
+    proximo corte).
+  * Los parametros E0 RK y t_final RK se muestran en columnas separadas de la tabla.
+
+E. VECTOR DE ESTADO Y ESTRUCTURA DE SLOTS (UTN STYLE)
+- Tabla Principal de 86 columnas agrupadas en cabeceras de dos niveles por Evento.
+- 15 Slots Fijos de Competidores Activos: Muestra la informacion de estado y tiempo de
+  llegada de los competidores ocupando la memoria del sistema. Se mapean con la
+  nomenclatura de la facultad:
+  * EA(I) / EA(A): Esperando atencion (Inicial / Avanzado).
+  * SA(Jul) / SA(Enz) / SA(Ref): Siendo atendido por el respectivo juez.
+  * SUSP(Jul) / SUSP(Enz) / SUSP(Ref): Evaluacion suspendida por corte de luz.
+  * - : Slot libre.
 
 -----------------------------------------------------------------------------
 2. QUE HACE CADA PARTE DEL CODIGO (ARQUITECTURA MODULAR)
@@ -64,59 +76,81 @@ El centro sufre cortes de luz temporales.
 
 Dividimos el codigo en 4 archivos independientes para mayor claridad y modularidad:
 
-A. runge_kutta.py (CALCULO MATHEMATICO)
+A. runge_kutta.py (CALCULO MATEMATICO)
 Resuelve la ecuacion diferencial usando el metodo Runge-Kutta de 4to Orden.
 - Implementa la funcion derivada dE/dt y calcula los cuatro coeficientes k1, k2, k3, k4
-  para cada paso.
+  para cada paso h.
 - Retorna el tiempo del proximo corte y una lista con todas las iteraciones de la tabla
-  RK4 para mostrar en el frontend.
+  RK4 para mostrar en la pestaña correspondiente del frontend.
 
-B. generadores.py (PROBABILIDAD Y ALEATORIEDAD)
-Contiene las formulas para generar variables aleatorias a partir de RND (Random.random()):
+B. generadores.py (PROBABILIDAD Y BOX-MULLER AISLADO POR JUEZ)
+Contiene las formulas para generar variables aleatorias a partir de RND (random.random()):
 - Exponencial: -media * ln(RND)
-- Normal (Metodo de Box-Muller): Toma dos RNDs (rnd1 y rnd2) y los transforma usando:
-  Z = sqrt(-2 * ln(rnd1)) * cos(2 * pi * rnd2)
-  Valor = media + desvio * Z
 - Uniforme: a + (b - a) * RND
-* Retorna el valor generado y los RNDs usados para poder mostrarlos en el vector de estado.
+- Normal (Box-Muller Alternado Aislado):
+  * Recibe un parametro `cache_owner` (la instancia del `Juez` que realiza la atencion).
+  * Si el juez no tiene nada en cache: Genera dos RNDs, calcula Z1 (con coseno) y Z2 (con seno),
+    escala ambos valores a minutos según la categoria actual, guarda el Tiempo 2 en `juez.cached_t_at2`
+    y retorna `(T_At1, rnd1, rnd2, T_At1, T_At2)`.
+  * Si el juez ya tiene un tiempo guardado (`cached_t_at2` no es None): Lo recupera directamente,
+    vacia el cache de ese juez y retorna `(T_At2, "-", "-", "-", T_At2)`.
+  * Esto asegura que el valor se conserve digito por digito y que Enzo no pise el cache de Julian.
 
 C. simulador.py (MOTOR DE SIMULACION POR EVENTOS DISCRETOS)
-- Define las clases Competidor y Juez con todos sus atributos.
-- Contiene la funcion simular(params) que corre el loop de eventos. Avanza el reloj al
+- Define las clases Competidor y Juez con todos sus atributos (incluyendo `juez.cached_t_at2`).
+- Contiene la funcion `simular(params)` que corre el loop de eventos. Avanza el reloj al
   tiempo del evento mas proximo y actualiza el estado de las colas, servidores y
   metricas acumuladas.
-- Inserta las filas solicitadas en el vector de estado, incluyendo en cada fila la lista
-  de todos los competidores activos en el sistema en ese instante de tiempo.
+- Condicion de parada: Simula hasta alcanzar el limite maximo de iteraciones (ej. 100,000)
+  o el tiempo maximo de simulacion X, lo que ocurra primero.
+- Genera y retorna el array del Vector de Estado de salida.
 
 D. simulacion.py (SERVIDOR WEB Y API HTTP)
-- Levanta un servidor HTTP nativo en el puerto 8000.
-- Sirve los archivos index.html, index.css y main.js al navegador.
-- Provee la ruta '/simular' que recibe parametros en formato JSON, ejecuta el motor del
-  simulador y retorna el vector de estado y metricas en formato JSON.
+- Levanta un servidor HTTPServer nativo en el puerto 8000.
+- Sirve los archivos index.html, index.css y main.js directamente desde el disco.
+- Provee la ruta '/simular' que recibe parametros en formato JSON, ejecuta el simulador
+  y retorna los resultados listos para pintar en el navegador.
 
-E. index.html / index.css / main.js (INTERFAZ WEB INTERACTIVA)
-- index.html: Define los campos de parametros y las tablas.
-- index.css: Da una apariencia moderna en modo oscuro, evita desbordes y hace la barra
-  lateral scrollable si la pantalla es de baja resolucion.
-- main.js: Maneja el envio de parametros por fetch(), renderiza las tablas y permite que
-  al hacer clic en cualquier fila del vector de estado se muestre la lista detallada de
-  competidores activos.
+E. index.html / index.css / main.js (FRONTEND INTERACTIVO PREMIUM)
+- index.html: Define los campos de parametros, cabeceras agrupadas y tablas.
+- index.css: Estilos en modo oscuro, de scroll y mejoras visuales.
+- main.js: Realiza la peticion AJAX, renderiza el vector de estado y provee interacciones clave.
 
 -----------------------------------------------------------------------------
-3. PREGUNTAS CLAVE DE COLOQUIO (PARA PREPARARSE)
+3. DETALLES DE INTERFAZ Y MEJORAS DE USABILIDAD (EXCEL-STYLE)
+-----------------------------------------------------------------------------
+
+Para que la navegacion de las 86 columnas sea comoda y facil de defender, incluimos:
+1. Columnas Pinned (Sticky): Las columnas de 'Iter.', 'Evento' y 'Reloj (min)' estan
+   ancladas a la izquierda. Al hacer scroll horizontal, permanecen fijas para no perder
+   el contexto de la fila.
+2. Modo Ancho Completo ("Expandir Tabla"): Un boton que oculta la barra lateral de
+   parametros y expande el vector de estado al 98% del ancho de pantalla.
+3. Arrastre Manual (Drag-to-Scroll): Permite desplazarse horizontalmente por la tabla
+   haciendo click izquierdo y arrastrando el raton en cualquier punto (estilo Excel).
+4. Inspeccion Dinamica de Fila: Al hacer click en cualquier fila, se destaca y despliega
+   un panel inferior con la lista completa de todos los competidores en el sistema en
+   ese segundo, detallando su ID, estado academico, tiempo en cola y variables generadas.
+5. Remocion de Filtros Completa: Se eliminaron los botones de filtros (chips) que
+   ocultaban columnas. Toda la tabla de 86 columnas se visualiza de forma nativa e
+   integra por defecto para asegurar la trazabilidad requerida por la catedra.
+
+-----------------------------------------------------------------------------
+4. PREGUNTAS CLAVE DE COLOQUIO (PARA PREPARARSE)
 -----------------------------------------------------------------------------
 
 1. ¿Como se simula la reanudacion tras un corte de luz?
-R: Cuando empieza el corte, extendemos el tiempo de fin de atencion de los jueces
-ocupados sumandole la duracion del corte. El juez pasa a estado 'Interrumpido'. Al
-finalizar el corte, vuelven a estado 'Ocupado' y la simulacion sigue normalmente.
+R: Al iniciar el corte, se calcula la duracion de la interrupcion. Se le suma este tiempo
+al `tiempo_fin_atencion` de los jueces ocupados para posponer su finalizacion. El estado de
+los jueces cambia a 'Interrumpido'. Al terminar el corte, vuelven a estar 'Ocupado' y la
+evaluacion se reanuda desde el mismo punto en que quedo.
 
 2. ¿Como se calculo la ocupacion de Enzo (incluyendo los cortes)?
 R: El juez acumula ocupacion desde el momento en que toma un competidor hasta que este
-termina. Durante el corte, el juez sigue reteniendo al competidor (esta 'Interrumpido'),
-por lo que el tiempo transcurrido en el corte sigue sumando a su periodo ocupado. Al
-final de la simulacion, si sigue atendiendo, se le suma la fraccion de tiempo hasta
-el instante X. Al final se divide el acumulador sobre el tiempo total simulado.
+termina. Durante el corte de luz, el juez sigue reteniendo al competidor (esta 'Interrumpido'),
+por lo que el tiempo del corte sigue sumando a su periodo ocupado. Al finalizar la simulacion,
+si sigue ocupado, se le suma la fraccion de tiempo hasta el instante X. Al final se divide el
+acumulador sobre el tiempo total simulado.
 
 3. ¿Por que Runge-Kutta se calcula multiples veces?
 R: Porque el enunciado pide que para cada proxima llegada de corte se tome como E(0) el
@@ -128,4 +162,29 @@ una nueva tabla de integracion RK4.
 R: Ocurre cuando el competidor que esta al frente de la cola es Avanzado y Julian esta
 ocupado. Aunque Enzo este libre, no puede atender a ningun Inicial que este detras de
 este competidor Avanzado porque se debe respetar estrictamente el orden de llegada.
+
+5. ¿Como se audita visualmente la logica de Box-Muller alternado en la tabla?
+R: En la fila donde se genera el par (llamada con coseno), se muestran los valores de
+`RND At.1`, `RND At.2`, `T. At. 1` (usado inmediatamente) y `T. At. 2` (guardado en el
+cache del juez). En la fila donde se consume el cache (llamada con seno), las columnas
+de RNDs y T1 muestran guiones `-`, y la columna `T. At. 2` muestra exactamente el valor
+reutilizado. Esto demuestra que no se generaron nuevos numeros aleatorios.
+
+6. ¿Por que el cache de Box-Muller es por juez y pre-escalado?
+R: Es por juez para evitar que Enzo consuma o sobreescriba un numero generado para Julian
+por superposicion de eventos. Es pre-escalado a minutos en la primera llamada para asegurar
+que el valor de `T. At. 2` sea exactamente identico (digito por digito) tanto en la fila de
+generacion como en la de consumo, evitando cambios visuales por cambio de categoria en el
+intermedio.
+
+7. ¿Que hace el programa cuando haces click en una fila de la tabla?
+R: Selecciona la fila pintandola de cian y despliega el panel interactivo "Competidores
+en el Sistema" al fondo de la pagina. Carga el array de competidores activos de esa iteracion
+y muestra a cada competidor con su categoria, hora de llegada, tiempo acumulado de espera
+en cola, juez asignado, estado (EA, SA, SUSP) y variables aleatorias de atencion.
+
+8. ¿Cual es la condicion de parada de la simulacion?
+R: El bucle de eventos discretos avanza y se detiene inmediatamente ante la primera de
+estas dos condiciones que se cumpla: o bien la iteracion llega al limite configurado
+(ej. 100,000 iteraciones), o bien el tiempo del siguiente evento supera el limite X.
 =============================================================================
