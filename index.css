@@ -371,7 +371,7 @@ table {
 }
 
 th {
-  background-color: var(--bg-card);
+  background-color: var(--bg-card) !important;
   color: var(--text-secondary);
   font-weight: 600;
   padding: 0.75rem 1rem;
@@ -381,11 +381,55 @@ th {
   z-index: 10;
 }
 
+/* Segunda fila del thead (sub-encabezados) se pega debajo de la primera */
+thead tr:nth-child(2) th {
+  top: 38px;
+  z-index: 9;
+  border-top: 1px solid var(--border-color);
+}
+
+/* ─── Colores opacos por grupo de columnas ───────────────────────────────────
+   Equivalente opaco de rgba(color, alpha) mezclado sobre #1f293d (bg-card).
+   Se usa !important para anular los inline styles transparentes del HTML.    */
+
+/* Cyan – Llegada, Categorización, Julián (iniciales), Enzo, Refuerzo        */
+/* rgba(6, 182, 212, 0.08)  →  #1d3449                                       */
+thead th.col-group-llegada    { background-color: #1d3449 !important; }
+thead th.col-group-cat        { background-color: #1d3449 !important; }
+thead th.col-group-julian     { background-color: #1d3449 !important; }
+thead th.col-group-enzo       { background-color: #1d3449 !important; }
+thead th.col-group-refuerzo   { background-color: #1d3449 !important; }
+
+/* Julián avanzados (segunda fila) – rgba(99, 102, 241, 0.06) → #232d48     */
+thead tr:nth-child(2) th.col-group-julian:nth-child(n+6):nth-child(-n+9) {
+  background-color: #232d48 !important;
+}
+
+/* Rose – Inconveniente Eléctrico – rgba(239, 68, 68, 0.08) → #302b3e       */
+thead th.col-group-corte      { background-color: #302b3e !important; }
+
+/* Amber – Juez de Refuerzo – rgba(245, 158, 11, 0.08) → #303239            */
+thead th.col-group-ref-llegada { background-color: #303239 !important; }
+
+/* Blue – Estados Jueces – rgba(59, 130, 246, 0.08) → #21304c               */
+thead th.col-group-jueces-est { background-color: #21304c !important; }
+
+/* Gray – Cola – rgba(107, 114, 128, 0.08) → #252f42                        */
+thead th.col-group-cola       { background-color: #252f42 !important; }
+
+/* Emerald – Competidores en Sistema – rgba(16, 185, 129, 0.08) → #1e3542   */
+thead th.col-group-slots      { background-color: #1e3542 !important; }
+
+/* Purple – Acumuladores – rgba(139, 92, 246, 0.08) → #282d4c               */
+thead th.col-group-acum       { background-color: #282d4c !important; }
+
+
 td {
   padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--border-color);
   color: var(--text-primary);
   font-family: var(--font-family-sans);
+  background-color: var(--bg-secondary);
 }
 
 tr {
@@ -626,11 +670,18 @@ tbody tr.selected-row {
   z-index: 20;
   border-right: 2px solid var(--border-color);
 }
+
+/* Thead sticky-left cells need higher z-index to stay above scrolling body cells */
 #table-vector-estado thead tr:first-child th:nth-child(1),
 #table-vector-estado thead tr:first-child th:nth-child(2),
 #table-vector-estado thead tr:first-child th:nth-child(3) {
   background-color: var(--bg-card) !important;
+  z-index: 30;
 }
+
+/* Segunda fila del thead: las primeras columnas también son sticky-left */
+/* En la segunda fila el thead tiene rowspan en las primeras 3 celdas, así que no hay ths en esas posiciones */
+/* Solo aseguramos que todos los ths de la segunda fila queden debajo de los de la primera */
 #table-vector-estado tbody td:nth-child(1),
 #table-vector-estado tbody td:nth-child(2),
 #table-vector-estado tbody tr td:nth-child(3) {
