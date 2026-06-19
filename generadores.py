@@ -20,7 +20,7 @@ def generar_exponencial(media):
     rnd = round(random.random(), 2)
     if rnd == 0.00:
         rnd = 0.01
-    valor = -media * math.log(rnd)
+    valor = -media * math.log(1 - rnd)
     return round(valor, 4), rnd
 
 
