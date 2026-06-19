@@ -1,0 +1,221 @@
+=============================================================================
+GUIA COMPLETA DE ESTUDIO Y DEFENSA DE COLOQUIO - TP5 SIMULACION
+UTN FRC - Ingeniería en Sistemas de Información - Ciclo Lectivo 2026
+TP5 - Grupo 18 - Versión Final Consolidada
+=============================================================================
+
+Esta guía contiene la explicación teórica, matemática y técnica completa del 
+Trabajo Práctico 5 de Simulación. Incluye la estructura detallada de todas las 
+columnas del Vector de Estado, el funcionamiento de Box-Muller por juez, la 
+integración por Runge-Kutta 4, la usabilidad de la interfaz y la resolución de 
+los problemas de ejecución en red local.
+
+-----------------------------------------------------------------------------
+1. EL MODELO DEL SISTEMA (ENUNCIADO Y REGLAS DE NEGOCIO)
+-----------------------------------------------------------------------------
+
+El sistema simula un Centro de Evaluación de Competidores con las siguientes reglas:
+
+A. ARRIBOS Y CATEGORÍAS (COMPETIDORES)
+- Llegadas: Se rigen por una distribución Exponencial Negativa (media: 5 minutos).
+- Categorización: Al llegar, cada competidor se clasifica mediante una probabilidad:
+  * Categoría Inicial (60%): Puede ser evaluado por cualquier juez disponible. 
+    Tiempo de atención: Distribución Normal N(8, 2) minutos.
+  * Categoría Avanzado (40%): SOLO puede ser evaluado por Julián.
+    Tiempo de atención: Distribución Normal N(12, 3) minutos.
+
+B. SERVIDORES (JUECES)
+- Julián (Fijo 1): Evalúa Iniciales y Avanzados con sus respectivas distribuciones.
+- Enzo (Fijo 2): Evalúa únicamente Iniciales.
+- Juez de Refuerzo (Temporal): Evalúa únicamente Iniciales. Funciona bajo demanda:
+  * Convocatoria: Se lo llama cuando la cola de espera tiene 5 o más competidores.
+  * Tiempo de viaje: Demora exactamente 10 minutos en llegar tras ser convocado.
+  * Duración de su turno: Trabaja un periodo Uniforme U(30, 50) minutos.
+  * Fin de turno: Al finalizar su periodo:
+    - Si la cola <= 1 competidor: Se retira (o espera a terminar el actual).
+    - Si la cola >= 2 competidores: Renueva su turno por un intervalo Uniforme U(10, 18) min.
+
+C. BLOQUEO DE COLA POR COMPATIBILIDAD
+Existe una única cola por orden de arribo. Si el competidor al frente (índice 0) 
+es Avanzado y Julián está ocupado, la cola se bloquea. Enzo no puede tomar a ningún 
+competidor Inicial que esté detrás de este Avanzado para respetar estrictamente el
+orden de llegada (FIFO).
+
+D. CORTES DE LUZ (RUNGE-KUTTA 4)
+- Efecto: Se suspenden las atenciones en curso. Al volver la luz, se reanudan.
+- Duración del corte: Distribución Exponencial Negativa (media: 2 minutos).
+- Programación del próximo corte (RK4): Ecuación diferencial dE/dt = (t^2 - E) * h^2.
+  * Para el primer corte: Se integra partiendo de t=0, E(0)=20.
+  * Para cortes siguientes: Se integra partiendo de t=0, tomando como E(0) el reloj 
+    actual de la simulación al finalizar el corte anterior.
+  * Parada de RK4: Se integra en pasos h hasta que E(t) supere por primera vez a E(0).
+    El valor de t final (en minutos) determina el tiempo de luz encendida hasta el 
+    próximo corte.
+
+-----------------------------------------------------------------------------
+2. LA ESTRUCTURA COMPLETA DEL VECTOR DE ESTADO (90 COLUMNAS)
+-----------------------------------------------------------------------------
+
+La tabla principal muestra la evolución del sistema fila por fila a través de los 
+eventos. Las columnas están estructuradas de la siguiente manera:
+
+- COLUMNAS GENERALES (1-3):
+  1. Iteración: Número correlativo de fila (0 a 100.000).
+  2. Evento: Nombre del evento actual (Inicio, llegada_competidor, fin_atencion_julian, 
+     fin_atencion_enzo, fin_atencion_refuerzo, llegada_refuerzo, fin_turno_refuerzo,
+     corte_electrico, fin_corte_electrico, Fin simulación).
+  3. Reloj (min): Tiempo acumulado de la simulación.
+
+- LLEGADA COMPETIDOR (4-6):
+  4. RND Lleg.: Número pseudoaleatorio (0-1) para determinar el intervalo.
+  5. T. Lleg.: Tiempo entre arribos calculado (-media * ln(RND)).
+  6. Próx. Llegada: Instante en que arribará el próximo competidor (Reloj + T. Lleg.).
+
+- CATEGORIZACIÓN (7-8):
+  7. RND Cat.: RND para categorizar al competidor que llega.
+  8. Cat.: Categoría asignada (Inicial si RND < 0.60, Avanzado si RND >= 0.60).
+
+- FIN ATENCIÓN JULIÁN (9-17):
+  * Para competidores Iniciales (I):
+    9. RND At.1 (I): RND 1 para Box-Muller (Coseno).
+    10. RND At.2 (I): RND 2 para Box-Muller (Seno).
+    11. T. At. 1 (I): Tiempo de atención 1 (calculado en la generación con coseno).
+    12. T. At. 2 (I): Tiempo de atención 2 (recuperado de caché en el siguiente consumo).
+  * Para competidores Avanzados (A):
+    13. RND At.1 (A): RND 1 para Box-Muller (Coseno).
+    14. RND At.2 (A): RND 2 para Box-Muller (Seno).
+    15. T. At. 1 (A): Tiempo de atención 1 para Avanzados (con coseno).
+    16. T. At. 2 (A): Tiempo de atención 2 para Avanzados (con seno, en caché).
+  * General:
+    17. Próx. Fin: Instante en que Julián terminará la atención (Reloj + Tiempo atención).
+
+- FIN ATENCIÓN ENZO (18-22):
+  18. RND At.1: RND 1 de Box-Muller.
+  19. RND At.2: RND 2 de Box-Muller.
+  20. T. At. 1: Tiempo de atención 1 (generado).
+  21. T. At. 2: Tiempo de atención 2 (cacheado / consumido).
+  22. Próx. Fin: Instante de finalización de Enzo.
+
+- FIN ATENCIÓN REFUERZO (23-27):
+  23. RND At.1: RND 1 de Box-Muller.
+  24. RND At.2: RND 2 de Box-Muller.
+  25. T. At. 1: Tiempo de atención 1.
+  26. T. At. 2: Tiempo de atención 2.
+  27. Próx. Fin: Instante de finalización del Refuerzo.
+
+- INCONVENIENTE ELÉCTRICO (28-33):
+  28. E0 RK: Condición inicial E(0) tomada para integrar RK4.
+  29. t_final RK: Tiempo de luz encendida calculado tras integrar la ecuación.
+  30. Próx. Corte: Instante programado para el corte (Reloj + t_final RK).
+  31. RND Corte: RND de duración de la interrupción.
+  32. Dur. Corte: Tiempo que durará el corte (-media * ln(RND)).
+  33. Fin Corte: Instante de finalización del corte de luz.
+
+- JUEZ DE REFUERZO - TURNO (34-37):
+  34. Lleg. Ref.: Instante programado de arribo del juez de refuerzo (Reloj + 10 min).
+  35. RND Turno: RND para determinar la duración del turno del refuerzo.
+  36. Dur. Turno: Tiempo asignado de turno (Uniforme a + (b-a)*RND).
+  37. Fin Turno: Instante programado para el fin de turno (Reloj + Dur. Turno).
+
+- ESTADOS DE SERVIDORES (38-46):
+  38. Estado Jul: Libre / Ocupado / Interrumpido.
+  39. Comp Jul: ID del competidor siendo evaluado por Julián.
+  40. Cat Jul: Categoría del competidor en Julián (Inicial / Avanzado).
+  41. Estado Enz: Libre / Ocupado / Interrumpido.
+  42. Comp Enz: ID del competidor en Enzo.
+  43. Cat Enz: Categoría (siempre Inicial).
+  44. Estado Ref: Inactivo / En camino / Libre / Ocupado / Interrumpido.
+  45. Comp Ref: ID del competidor en el Refuerzo.
+  46. Cat Ref: Categoría (siempre Inicial).
+
+- COLA (47-48):
+  47. Tam.: Cantidad de competidores esperando en la cola.
+  48. Detalle: IDs y Categorías de los competidores ordenados en cola (ej. C1(I), C2(A)).
+
+- SLOTS ESTÁTICOS DE COMPETIDORES ACTIVOS (49-78):
+  Consiste en 15 slots de memoria estáticos con 2 columnas cada uno (Est. X y Lleg. X):
+  * Est. X: Estado del competidor en el sistema:
+    - EA(I) / EA(A): Esperando Atención.
+    - SA(Jul) / SA(Enz) / SA(Ref): Siendo Atendido por el respectivo Juez.
+    - SUSP(Jul) / SUSP(Enz) / SUSP(Ref): Atención Suspendida por corte eléctrico.
+  * Lleg. X: Hora de arribo del competidor correspondiente a ese slot.
+
+- METRICAS Y ACUMULADORES (79-89):
+  79. Ac. Cola Ini: Tiempo de espera acumulado de competidores Iniciales.
+  80. C. Cola Ini: Contador de competidores Iniciales que pasaron por cola.
+  81. Ac. Cola Av: Tiempo de espera acumulado de competidores Avanzados.
+  82. C. Cola Av: Contador de competidores Avanzados que pasaron por cola.
+  83. Max Espera: Máximo tiempo registrado de espera en cola de cualquier competidor.
+  84. Ac. Oc. Jul: Tiempo acumulado de ocupación de Julián (incluye tiempos de corte).
+  85. Ac. Oc. Enz: Tiempo acumulado de ocupación de Enzo (incluye tiempos de corte).
+  86. Ac. Oc. Ref: Tiempo acumulado de ocupación del Refuerzo (incluye tiempos de corte).
+  87. C. At. Jul: Cantidad total de competidores evaluados por Julián.
+  88. C. At. Enz: Cantidad total de competidores evaluados por Enzo.
+  89. C. At. Ref: Cantidad total de competidores evaluados por el Refuerzo.
+
+- ESTADO GENERAL (90):
+  90. ¿Corte?: Indicador de si el sistema está bajo un corte eléctrico de luz (Sí / No).
+
+-----------------------------------------------------------------------------
+3. MATEMÁTICA Y LÓGICA ESPECIAL
+-----------------------------------------------------------------------------
+
+A. BOX-MULLER ALTERNADO AISLADO Y PRE-ESCALADO POR JUEZ
+1. Generación del par (Coseno): Se toman 2 RNDs, se calcula $Z_1 = \sqrt{-2 \ln(RND_1)} \cos(2\pi RND_2)$
+   y $Z_2 = \sqrt{-2 \ln(RND_1)} \sin(2\pi RND_2)$.
+2. Pre-escalado: Se calcula inmediatamente el tiempo de atención en minutos para ambos valores:
+   $T_1 = \mu + Z_1 \cdot \sigma$  y  $T_2 = \mu + Z_2 \cdot \sigma$.
+3. Caché por Juez: Julián, Enzo y el Juez de Refuerzo tienen una variable individual `cached_t_at2`
+   en su instancia. En la generación, $T_1$ se usa y $T_2$ se guarda en `cached_t_at2` del juez.
+4. Consumo (Seno): En la siguiente atención del juez, recupera `cached_t_at2`, vacía el caché,
+   y se muestra en la columna `T. At. 2` con los RNDs e Intervalos como guiones `-`.
+5. ¿Por qué es por juez y pre-escalado?:
+   - Por juez: Evita que Enzo consuma el seno de Julián si se intercalan eventos.
+   - Pre-escalado: Garantiza que $T_2$ se mantenga idéntico dígito por dígito. Si se guardara $Z_2$
+     sin escalar, y Julián atendiera un Inicial y luego un Avanzado, $Z_2$ se escalaría con la media 
+     del Avanzado, rompiendo la consistencia numérica visual entre la fila de generación y la de consumo.
+
+B. RUNGE-KUTTA 4 RECURSIVO (ECUACIÓN dE/dt = (t^2 - E) * h^2)
+Al finalizar un corte de luz en el instante $t_{fin}$, se toma como condición inicial $E(0) = t_{fin}$.
+Se integra paso a paso ($t_i = t_{i-1} + h$, $E_i = E_{i-1} + (k_1 + 2k_2 + 2k_3 + k_4)/6$) hasta 
+que $E_i > E(0)$.
+El valor de $t_i$ en ese punto es la duración en minutos de la luz encendida. El próximo corte se 
+programa para $Reloj + t_i$.
+
+-----------------------------------------------------------------------------
+4. GUIA DE TRIPLE CONTROL Y RESOLUCION DE ERRORES COMUNES (BUGS)
+-----------------------------------------------------------------------------
+
+A. EL ERROR DE COLUMNAS "UNDEFINED"
+Si las columnas avanzadas de Julián u otras muestran "undefined", se debe a una desincronización 
+entre el frontend (`main.js` que espera ciertas claves) y el backend (`simulador.py` que no las envía).
+
+B. ZOMBIES DE PYTHON EN SEGUNDO PLANO (PUERTO 8000)
+A veces, al detener y arrancar de forma abrupta el servidor en Windows, quedan instancias de
+Python en segundo plano (zombies) reteniendo el puerto 8000. Windows permite que múltiples procesos 
+escuchen en el mismo puerto usando reutilización de sockets. Esto hace que tu navegador a veces
+le envíe peticiones a un zombie viejo que ejecuta código antiguo en la RAM, ignorando los cambios 
+hechos en el archivo `.py` de la computadora.
+
+C. CÓMO LIMPIAR EL PUERTO Y REINICIAR EN WINDOWS COMPLETAMENTE:
+1. Buscar los PIDs que escuchan en el puerto 8000:
+   `powershell -Command "Get-NetTCPConnection -LocalPort 8000 -State Listen"`
+2. Matar los procesos huérfanos detectados (ej. PID 8284):
+   `taskkill /F /PID 8284`
+3. Borrar la caché de compilación de Python en la carpeta del proyecto para asegurar código limpio:
+   `powershell -Command "Remove-Item -Path '.\__pycache__' -Recurse -Force"`
+4. Levantar nuevamente el servidor:
+   `python simulacion.py`
+5. Recargar Brave/Chrome limpiando caché (`Ctrl + Shift + R` o abriendo F12 y eligiendo 
+   "Vaciar caché y volver a cargar de forma forzada").
+
+-----------------------------------------------------------------------------
+5. CONDICIÓN DE PARADA DOBLE
+-----------------------------------------------------------------------------
+El bucle de eventos discretos en `simulador.py` avanza y se corta ante la primera de estas dos
+condiciones:
+1. El número de iteraciones procesadas llega al límite (por defecto 100.000).
+2. El tiempo del evento más próximo supera el tiempo máximo $X$ parametrizado (por defecto 480 min).
+En ese instante, se calcula el estado de las variables y métricas remanentes hasta el límite exacto 
+de la simulación y se genera la fila final ("Fin simulación").
+=============================================================================
