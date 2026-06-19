@@ -161,8 +161,7 @@ function renderizarVectorEstado() {
     
     // Si es la fila final (instante X), darle un estilo diferenciador sutil
     if (fila.es_ultima_fila) {
-      tr.style.borderTop = '2px solid var(--accent-amber)';
-      tr.style.backgroundColor = 'rgba(245, 158, 11, 0.03)';
+      tr.classList.add('es-ultima-fila');
     }
 
     // Formateador de badges de Juez

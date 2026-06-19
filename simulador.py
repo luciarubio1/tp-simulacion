@@ -140,7 +140,7 @@ def simular(params):
     iteracion = 0
 
     # ─────────────────────────────────────────────────────────────────────────
-    #  ASIGNACIÓN DESDE COLA (CORREGIDA CON CAPTURA DE DETALLES)
+    #  ASIGNACIÓN DESDE COLA
     # ─────────────────────────────────────────────────────────────────────────
     def asignar_desde_cola(detalles_dict=None):
         if en_corte or not cola:
