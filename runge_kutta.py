@@ -18,13 +18,14 @@ def f_diferencial(t, E, h):
     return (t**2 - E) * (h**2)
 
 
-def runge_kutta_4(E0, h, max_iter=10000):
+def runge_kutta_4(E0, h, max_iter=10000, guardar_tabla=True):
     """
     Aplica Runge-Kutta de 4to orden para resolver dE/dt = (t^2 - E) * h^2.
     
     Parámetros:
       E0: valor inicial de E (E(0))
       h:  paso de integración
+      guardar_tabla: si es False, no genera el detalle de las filas (optimización)
     
     Retorna:
       - tiempo_minutos: t_final * 8 (conversión a minutos reales)
@@ -34,6 +35,21 @@ def runge_kutta_4(E0, h, max_iter=10000):
     E = E0
     tabla_rk = []
     
+    if not guardar_tabla:
+        # Camino rápido sin instanciar diccionarios ni redondear en cada paso
+        for n in range(1, max_iter + 1):
+            k1 = (t**2 - E) * (h**2)
+            k2 = ((t + h/2)**2 - (E + h/2 * k1)) * (h**2)
+            k3 = ((t + h/2)**2 - (E + h/2 * k2)) * (h**2)
+            k4 = ((t + h)**2 - (E + h * k3)) * (h**2)
+            
+            E = E + (h/6) * (k1 + 2*k2 + 2*k3 + k4)
+            t = t + h
+            
+            if E > E0:
+                return t * 8, []
+        return t * 8, []
+
     for n in range(1, max_iter + 1):
         k1 = f_diferencial(t, E, h)
         k2 = f_diferencial(t + h/2, E + h/2 * k1, h)

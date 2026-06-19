@@ -708,15 +708,17 @@ def simular(params):
                     juez.estado = 'Ocupado'
             
             E0_nuevo = reloj
-            tiempo_siguiente_corte, tabla_rk_nueva = runge_kutta_4(E0_nuevo, H_RK)
+            corte_visible = (ITER_DESDE - 10 <= iteracion <= ITER_DESDE + ITER_CANT + 10)
+            tiempo_siguiente_corte, tabla_rk_nueva = runge_kutta_4(E0_nuevo, H_RK, guardar_tabla=corte_visible)
             t_prox_corte = reloj + tiempo_siguiente_corte
             
-            t_final_rk_nueva = tabla_rk_nueva[-1]['t'] if tabla_rk_nueva else 0.0
+            t_final_rk_nueva = tiempo_siguiente_corte / 8.0
             
-            todas_las_tablas_rk.append({
-                "titulo": f"RK4 - Corte desde reloj={round(reloj,2)} (E0={E0_nuevo}, h={H_RK})",
-                "filas": tabla_rk_nueva
-            })
+            if corte_visible:
+                todas_las_tablas_rk.append({
+                    "titulo": f"RK4 - Corte desde reloj={round(reloj,2)} (E0={E0_nuevo}, h={H_RK})",
+                    "filas": tabla_rk_nueva
+                })
             
             detalles['rk_e0']      = round(E0_nuevo, 4)
             detalles['rk_t_final'] = round(t_final_rk_nueva, 4)
@@ -724,8 +726,8 @@ def simular(params):
             
             asignar_desde_cola(detalles)
             
-        fila = construir_fila(evento_tipo, detalles)
         if ITER_DESDE <= iteracion < ITER_DESDE + ITER_CANT:
+            fila = construir_fila(evento_tipo, detalles)
             vector_estado.append(fila)
 
     if fila_final is None:

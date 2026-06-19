@@ -14,12 +14,12 @@ import random
 def generar_exponencial(media):
     """
     Genera un valor con distribución exponencial negativa.
-    Fórmula: -media * ln(rnd)
-    Se redondea el RND a 2 dígitos y se evita RND = 0.00 para evitar log(0).
+    Fórmula: -media * ln(1 - rnd)
+    Se redondea el RND a 2 dígitos y se evita RND = 1.00 para evitar log(0).
     """
     rnd = round(random.random(), 2)
-    if rnd == 0.00:
-        rnd = 0.01
+    if rnd == 1.00:
+        rnd = 0.99
     valor = -media * math.log(1 - rnd)
     return round(valor, 4), rnd
 
